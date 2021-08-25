@@ -28,7 +28,7 @@ func newCache() *cache {
 // GetOrSet atomic get exist values from cache or call f for set new value and return it.
 // it has gurantee about only one f will execute same time for the key.
 // but many f may execute simultaneously for different keys
-func (c *cache) GetOrSet(key cacheKey, f FixtureInternalFunc) (interface{}, error) {
+func (c *cache) GetOrSet(key cacheKey, f FixtureCallbackFunc) (interface{}, error) {
 	res, ok := c.get(key)
 	if ok {
 		return res.res, res.err
@@ -40,6 +40,16 @@ func (c *cache) GetOrSet(key cacheKey, f FixtureInternalFunc) (interface{}, erro
 	return res.res, res.err
 }
 
+func (c *cache) DeleteKeys(keys ...cacheKey) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	for _, key := range keys {
+		delete(c.store, key)
+		delete(c.setLocks, key)
+	}
+}
+
 func (c *cache) get(key cacheKey) (cacheVal, bool) {
 	c.m.RLock()
 	defer c.m.RUnlock()
@@ -47,7 +57,7 @@ func (c *cache) get(key cacheKey) (cacheVal, bool) {
 	return val, ok
 }
 
-func (c *cache) setOnce(key cacheKey, f FixtureInternalFunc) {
+func (c *cache) setOnce(key cacheKey, f FixtureCallbackFunc) {
 	c.m.Lock()
 	setOnce := c.setLocks[key]
 	if setOnce == nil {

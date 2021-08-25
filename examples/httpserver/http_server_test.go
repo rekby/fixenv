@@ -25,7 +25,7 @@ func pingServer(env fixenv.Env) *httptest.Server {
 		})
 		server = httptest.NewServer(mux)
 		return server, nil
-	}, &fixenv.FixtureOptions{TearDown: func() {
+	}, &fixenv.FixtureOptions{CleanupFunc: func() {
 		server.Close()
 	}}).(*httptest.Server)
 }

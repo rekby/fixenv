@@ -1,22 +1,44 @@
 package fixenv
 
-// FixtureInternalFunc - function, which result can cached
-// res - result for cache.
-// if err not nil - T().Fatalf() will called with error message
-// if res exit without return (panic, GoExit, t.FailNow, ...)
-// then cache error about unexpected exit
-type FixtureInternalFunc func() (res interface{}, err error)
-
 // Env - fixture cache engine.
 type Env interface {
 	// T - return t object of current test/benchmark.
 	T() T
 
-	Cache(params interface{}, f FixtureInternalFunc, opt *FixtureOptions) interface{}
+	Cache(params interface{}, f FixtureCallbackFunc, opt *FixtureOptions) interface{}
 }
 
-// T is subtime of testing.TB
-// it can extended from time to time, but include only public methods from testing.TB
+type CacheScope int
+
+const (
+	// ScopeTest mean fixture function with same parameters called once per every test and subtests. Default value.
+	// Second and more calls will use cached value.
+	ScopeTest CacheScope = iota
+
+	// ScopePackage mean fixture function with same parameters called once per package
+	// for use the scope with TearDown function developer must initialize global handler and cleaner at TestMain.
+	ScopePackage CacheScope = iota
+)
+
+// FixtureCallbackFunc - function, which result can cached
+// res - result for cache.
+// if err not nil - T().Fatalf() will called with error message
+// if res exit without return (panic, GoExit, t.FailNow, ...)
+// then cache error about unexpected exit
+type FixtureCallbackFunc func() (res interface{}, err error)
+
+type FixtureCleanupFunc func()
+
+type FixtureOptions struct {
+	// Scope for cache result
+	Scope CacheScope
+
+	// CleanupFunc if not nil - called for cleanup fixture results
+	// it called exactly once for every succesully call fixture
+	CleanupFunc FixtureCleanupFunc
+}
+
+// T is subtype of testing.TB
 type T interface {
 	Cleanup(func())
 	Fatalf(format string, args ...interface{})

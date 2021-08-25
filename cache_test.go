@@ -14,19 +14,119 @@ import (
 
 const waitTime = time.Second / 10
 
+func TestCache_DeleteKeys(t *testing.T) {
+	t.Run("simple", func(t *testing.T) {
+		at := assert.New(t)
+
+		c := newCache()
+		k1 := cacheKey("k1")
+		k2 := cacheKey("k2")
+		k3 := cacheKey("k3")
+		val1 := "test1"
+		valFunc := func() (interface{}, error) {
+			return val1, nil
+		}
+
+		c.setOnce(k1, valFunc)
+		c.setOnce(k2, valFunc)
+		c.setOnce(k3, valFunc)
+
+		c.DeleteKeys(k1, k2)
+		_, ok := c.get(k1)
+		at.False(ok)
+		_, ok = c.get(k2)
+		at.False(ok)
+		res, ok := c.get(k3)
+		at.True(ok)
+		at.Equal(val1, res.res)
+
+		val2 := "test2"
+		c.setOnce(k1, func() (res interface{}, err error) {
+			return val2, nil
+		})
+		res, ok = c.get(k1)
+		at.True(ok)
+		at.Equal(val2, res.res)
+	})
+
+	t.Run("mutex", func(t *testing.T) {
+		at := assert.New(t)
+
+		c := newCache()
+		c.setOnce("asd", func() (res interface{}, err error) {
+			return nil, nil
+		})
+
+		c.m.RLock()
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			c.DeleteKeys("asd")
+			wg.Done()
+		}()
+
+		time.Sleep(waitTime)
+		at.Len(c.store, 1)
+		at.Len(c.setLocks, 1)
+
+		c.m.RUnlock()
+		wg.Wait()
+		at.Len(c.store, 0)
+		at.Len(c.setLocks, 0)
+	})
+}
+
 func TestCache_Get(t *testing.T) {
-	at := assert.New(t)
+	t.Run("simple", func(t *testing.T) {
+		at := assert.New(t)
+		c := newCache()
 
-	c := newCache()
+		_, ok := c.get("qwe")
+		at.False(ok)
 
-	_, ok := c.get("qwe")
-	at.False(ok)
+		c.store["asd"] = cacheVal{res: "val"}
 
-	c.store["asd"] = cacheVal{res: "val"}
+		res, ok := c.get("asd")
+		at.True(ok)
+		at.Equal(cacheVal{res: "val"}, res)
+	})
 
-	res, ok := c.get("asd")
-	at.True(ok)
-	at.Equal(cacheVal{res: "val"}, res)
+	t.Run("read_mutex", func(t *testing.T) {
+		at := assert.New(t)
+		c := newCache()
+		c.setOnce("asd", func() (res interface{}, err error) {
+			return nil, nil
+		})
+		c.m.RLock()
+		_, ok := c.get("asd")
+		c.m.RUnlock()
+		at.True(ok)
+	})
+
+	t.Run("write_mutex", func(t *testing.T) {
+		at := assert.New(t)
+		c := newCache()
+		c.setOnce("asd", func() (res interface{}, err error) {
+			return nil, nil
+		})
+		c.m.Lock()
+		var ok bool
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			_, ok = c.get("asd")
+			wg.Done()
+		}()
+
+		time.Sleep(waitTime)
+		at.False(ok)
+
+		c.m.Unlock()
+		wg.Wait()
+
+		at.True(ok)
+	})
+
 }
 
 func TestCache_SetOnce(t *testing.T) {
@@ -99,32 +199,28 @@ func TestCache_SetOnce(t *testing.T) {
 		c := newCache()
 		key := cacheKey("1")
 
-		var firstMuStarted sync.Mutex
-		firstMuStarted.Lock()
+		var firstMuStarted = make(chan bool)
 
-		var firstMuNeedFinish sync.Mutex
-		firstMuNeedFinish.Lock()
+		var firstMuNeedFinish = make(chan bool)
 
-		var firstMuFinished sync.Mutex
-		firstMuFinished.Lock()
+		var firstMuFinished = make(chan bool)
 
 		// first
 		go func() {
 			c.setOnce(key, func() (res interface{}, err error) {
-				firstMuStarted.Unlock()
-
-				firstMuNeedFinish.Lock()
-				defer firstMuNeedFinish.Unlock()
+				close(firstMuStarted)
+				<-firstMuNeedFinish
 
 				return 1, nil
 			})
 
-			firstMuFinished.Unlock()
+			close(firstMuFinished)
 		}()
 
 		// wait first func start execute
-		firstMuStarted.Lock()
-		firstMuStarted.Unlock()
+		<-firstMuStarted
+
+		var secondFinished = make(chan bool)
 
 		var doneSecond int64
 		go func() {
@@ -135,22 +231,24 @@ func TestCache_SetOnce(t *testing.T) {
 
 			// must executed only after fist func finished
 			atomic.AddInt64(&doneSecond, 1)
+			close(secondFinished)
 		}()
 
 		time.Sleep(waitTime)
+
+		// second not work until first finished
 		doneSecondVal := atomic.LoadInt64(&doneSecond)
 		_, ok := c.store[key]
 		at.False(ok)
 		at.Equal(int64(0), doneSecondVal)
 
-		firstMuNeedFinish.Unlock()
+		close(firstMuNeedFinish)
 
 		// wait first func finished
-		firstMuFinished.Lock()
-		firstMuFinished.Unlock()
+		<-firstMuFinished
 
-		// give time for execute second func
-		time.Sleep(waitTime)
+		// wait second finished
+		<-secondFinished
 
 		doneSecondVal = atomic.LoadInt64(&doneSecond)
 		at.Equal(1, c.store[key].res)
@@ -163,32 +261,27 @@ func TestCache_SetOnce(t *testing.T) {
 		key1 := cacheKey("1")
 		key2 := cacheKey("2")
 
-		var firstMuStarted sync.Mutex
-		firstMuStarted.Lock()
+		var firstMuStarted = make(chan bool)
 
-		var firstMuNeedFinish sync.Mutex
-		firstMuNeedFinish.Lock()
+		var firstMuNeedFinish = make(chan bool)
 
-		var firstMuFinished sync.Mutex
-		firstMuFinished.Lock()
+		var firstMuFinished = make(chan bool)
 
 		// first
 		go func() {
 			c.setOnce(key1, func() (res interface{}, err error) {
-				firstMuStarted.Unlock()
+				close(firstMuStarted)
 
-				firstMuNeedFinish.Lock()
-				defer firstMuNeedFinish.Unlock()
+				<-firstMuNeedFinish
 
 				return 1, nil
 			})
 
-			firstMuFinished.Unlock()
+			close(firstMuFinished)
 		}()
 
 		// wait first func start execute
-		firstMuStarted.Lock()
-		firstMuStarted.Unlock()
+		<-firstMuStarted
 
 		// call second func in same goroutine
 		c.setOnce(key2, func() (res interface{}, err error) {
@@ -197,11 +290,11 @@ func TestCache_SetOnce(t *testing.T) {
 		})
 
 		// allow finish first func after second already finished
-		firstMuNeedFinish.Unlock()
+		close(firstMuNeedFinish)
 
 		// wait first func finished
-		firstMuFinished.Lock()
-		firstMuFinished.Unlock()
+		<-firstMuFinished
+
 		at.Equal(1, c.store[key1].res)
 		at.Equal(2, c.store[key2].res)
 	})

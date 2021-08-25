@@ -5,30 +5,43 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"sync"
 )
+
+const packageScopeName = "TestMain"
 
 var (
 	globalCache               = newCache()
 	globalEmptyFixtureOptions = &FixtureOptions{}
+
+	globalMutex     = &sync.Mutex{}
+	globalScopeInfo = make(map[string]*scopeInfo)
 )
 
 type EnvT struct {
 	t T
 	c *cache
+
+	m      sync.Locker
+	scopes map[string]*scopeInfo
 }
 
 func NewEnv(t T) *EnvT {
-	return &EnvT{
-		t: t,
-		c: globalCache,
+	env := &EnvT{
+		t:      t,
+		c:      globalCache,
+		m:      globalMutex,
+		scopes: globalScopeInfo,
 	}
+	env.onCreate()
+	return env
 }
 
 func (e *EnvT) T() T {
 	return e.t
 }
 
-func (e *EnvT) Cache(params interface{}, f FixtureInternalFunc, opt *FixtureOptions) interface{} {
+func (e *EnvT) Cache(params interface{}, f FixtureCallbackFunc, opt *FixtureOptions) interface{} {
 	if opt == nil {
 		opt = globalEmptyFixtureOptions
 	}
@@ -38,7 +51,7 @@ func (e *EnvT) Cache(params interface{}, f FixtureInternalFunc, opt *FixtureOpti
 		// return not reacheble after Fatalf
 		return nil
 	}
-	wrappedF := fixtureCallWrapper(e.t, f, opt)
+	wrappedF := e.fixtureCallWrapper(e.t, f, opt)
 	res, err := e.c.GetOrSet(key, wrappedF)
 	if err != nil {
 		e.t.Fatalf("failed to call fixture func: %v", err)
@@ -47,6 +60,33 @@ func (e *EnvT) Cache(params interface{}, f FixtureInternalFunc, opt *FixtureOpti
 	}
 
 	return res
+}
+
+func (e *EnvT) cleanup() {
+	e.m.Lock()
+	defer e.m.Unlock()
+
+	testName := e.t.Name()
+	if si, ok := e.scopes[testName]; ok {
+		cacheKeys := si.Keys()
+		e.c.DeleteKeys(cacheKeys...)
+		delete(e.scopes, testName)
+	} else {
+		e.t.Fatalf("unexpected call env cleanup for test: %q", testName)
+	}
+}
+
+func (e *EnvT) onCreate() {
+	e.m.Lock()
+	defer e.m.Unlock()
+
+	testName := e.t.Name()
+	if _, ok := e.scopes[testName]; ok {
+		e.t.Fatalf("Env exist already for scope: %q")
+	} else {
+		e.scopes[testName] = newScopeInfo(e.t)
+		e.t.Cleanup(e.cleanup)
+	}
 }
 
 // makeCacheKey generate cache key
@@ -70,8 +110,8 @@ func makeCacheKey(testname string, params interface{}, opt *FixtureOptions, test
 		LineNum      int         `json:"line"`
 		Params       interface{} `json:"params"`
 	}{
-		Scope: opt.Scope,
-		//ScopeName:    testname, // set above
+		Scope:        opt.Scope,
+		ScopeName:    scopeName(testname, opt.Scope),
 		FunctionName: extCallerFrame.Function,
 		FileName:     extCallerFrame.File,
 		LineNum:      extCallerFrame.Line,
@@ -82,13 +122,6 @@ func makeCacheKey(testname string, params interface{}, opt *FixtureOptions, test
 		key.FileName = ".../" + filepath.Base(key.FileName)
 	}
 
-	switch opt.Scope {
-	case ScopeTest:
-		key.ScopeName = testname
-	default:
-		return "", fmt.Errorf("unexpected scope: %v", opt.Scope)
-	}
-
 	keyBytes, err := json.Marshal(key)
 	if err != nil {
 		return "", fmt.Errorf("failed to serialize params to json: %v", err)
@@ -96,12 +129,33 @@ func makeCacheKey(testname string, params interface{}, opt *FixtureOptions, test
 	return cacheKey(keyBytes), nil
 }
 
-func fixtureCallWrapper(t T, f FixtureInternalFunc, opt *FixtureOptions) FixtureInternalFunc {
+func (e *EnvT) fixtureCallWrapper(t T, f FixtureCallbackFunc, opt *FixtureOptions) FixtureCallbackFunc {
 	return func() (res interface{}, err error) {
+		scopeName := scopeName(e.t.Name(), opt.Scope)
+
+		e.m.Lock()
+		si := e.scopes[scopeName]
+		e.m.Unlock()
+
+		if si == nil {
+			e.t.Fatalf("Unexpected scope. Create env for test %q", scopeName)
+		}
+
 		res, err = f()
-		if opt.Scope == ScopeTest && opt.TearDown != nil {
-			t.Cleanup(opt.TearDown)
+		if opt.Scope == ScopeTest && opt.CleanupFunc != nil {
+			t.Cleanup(opt.CleanupFunc)
 		}
 		return res, err
+	}
+}
+
+func scopeName(testName string, scope CacheScope) string {
+	switch scope {
+	case ScopePackage:
+		return packageScopeName
+	case ScopeTest:
+		return testName
+	default:
+		panic(fmt.Sprintf("Unknown scope: %v", scope))
 	}
 }
