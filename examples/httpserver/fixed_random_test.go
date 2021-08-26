@@ -7,9 +7,9 @@ import (
 )
 
 func fixedRandom(e fixenv.Env) int {
-	return e.Cache(nil, func() (res interface{}, err error) {
+	return e.Cache(nil, nil, func() (res interface{}, err error) {
 		return rand.Int(), nil
-	}, nil).(int)
+	}).(int)
 }
 
 func TestFixedRandom(t *testing.T) {

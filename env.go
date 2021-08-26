@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 )
 
@@ -27,21 +28,25 @@ type EnvT struct {
 }
 
 func NewEnv(t T) *EnvT {
-	env := &EnvT{
-		t:      t,
-		c:      globalCache,
-		m:      globalMutex,
-		scopes: globalScopeInfo,
-	}
+	env := newEnv(t, globalCache, globalMutex, globalScopeInfo)
 	env.onCreate()
 	return env
+}
+
+func newEnv(t T, c *cache, m sync.Locker, scopes map[string]*scopeInfo) *EnvT {
+	return &EnvT{
+		t:      t,
+		c:      c,
+		m:      m,
+		scopes: scopes,
+	}
 }
 
 func (e *EnvT) T() T {
 	return e.t
 }
 
-func (e *EnvT) Cache(params interface{}, f FixtureCallbackFunc, opt *FixtureOptions) interface{} {
+func (e *EnvT) Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{} {
 	if opt == nil {
 		opt = globalEmptyFixtureOptions
 	}
@@ -51,7 +56,7 @@ func (e *EnvT) Cache(params interface{}, f FixtureCallbackFunc, opt *FixtureOpti
 		// return not reacheble after Fatalf
 		return nil
 	}
-	wrappedF := e.fixtureCallWrapper(e.t, f, opt)
+	wrappedF := e.fixtureCallWrapper(key, f, opt)
 	res, err := e.c.GetOrSet(key, wrappedF)
 	if err != nil {
 		e.t.Fatalf("failed to call fixture func: %v", err)
@@ -82,7 +87,7 @@ func (e *EnvT) onCreate() {
 
 	testName := e.t.Name()
 	if _, ok := e.scopes[testName]; ok {
-		e.t.Fatalf("Env exist already for scope: %q")
+		e.t.Fatalf("Env exist already for scope: %q", testName)
 	} else {
 		e.scopes[testName] = newScopeInfo(e.t)
 		e.t.Cleanup(e.cleanup)
@@ -129,7 +134,7 @@ func makeCacheKey(testname string, params interface{}, opt *FixtureOptions, test
 	return cacheKey(keyBytes), nil
 }
 
-func (e *EnvT) fixtureCallWrapper(t T, f FixtureCallbackFunc, opt *FixtureOptions) FixtureCallbackFunc {
+func (e *EnvT) fixtureCallWrapper(key cacheKey, f FixtureCallbackFunc, opt *FixtureOptions) FixtureCallbackFunc {
 	return func() (res interface{}, err error) {
 		scopeName := scopeName(e.t.Name(), opt.Scope)
 
@@ -139,11 +144,16 @@ func (e *EnvT) fixtureCallWrapper(t T, f FixtureCallbackFunc, opt *FixtureOption
 
 		if si == nil {
 			e.t.Fatalf("Unexpected scope. Create env for test %q", scopeName)
+			// not reachable
+			return nil, nil
 		}
+		defer func() {
+			si.AddKey(key)
+		}()
 
 		res, err = f()
-		if opt.Scope == ScopeTest && opt.CleanupFunc != nil {
-			t.Cleanup(opt.CleanupFunc)
+		if opt.CleanupFunc != nil {
+			si.t.Cleanup(opt.CleanupFunc)
 		}
 		return res, err
 	}
@@ -155,6 +165,9 @@ func scopeName(testName string, scope CacheScope) string {
 		return packageScopeName
 	case ScopeTest:
 		return testName
+	case ScopeTestAndSubtests:
+		parts := strings.SplitN(testName, "/", 2)
+		return parts[0]
 	default:
 		panic(fmt.Sprintf("Unknown scope: %v", scope))
 	}

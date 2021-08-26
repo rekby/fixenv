@@ -5,7 +5,7 @@ type Env interface {
 	// T - return t object of current test/benchmark.
 	T() T
 
-	Cache(params interface{}, f FixtureCallbackFunc, opt *FixtureOptions) interface{}
+	Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
 }
 
 type CacheScope int
@@ -18,6 +18,9 @@ const (
 	// ScopePackage mean fixture function with same parameters called once per package
 	// for use the scope with TearDown function developer must initialize global handler and cleaner at TestMain.
 	ScopePackage CacheScope = iota
+
+	// ScopeTestAndSubtests mean fixture cached for top level test and subtests
+	ScopeTestAndSubtests CacheScope = iota
 )
 
 // FixtureCallbackFunc - function, which result can cached

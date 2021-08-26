@@ -17,7 +17,9 @@ var (
 func pingServer(env fixenv.Env) *httptest.Server {
 	var server *httptest.Server
 
-	return env.Cache(nil, func() (res interface{}, err error) {
+	return env.Cache(nil, &fixenv.FixtureOptions{CleanupFunc: func() {
+		server.Close()
+	}}, func() (res interface{}, err error) {
 		mux := &http.ServeMux{}
 		mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 			_, _ = writer.Write([]byte("OK" + strconv.Itoa(globalCounter)))
@@ -25,9 +27,7 @@ func pingServer(env fixenv.Env) *httptest.Server {
 		})
 		server = httptest.NewServer(mux)
 		return server, nil
-	}, &fixenv.FixtureOptions{CleanupFunc: func() {
-		server.Close()
-	}}).(*httptest.Server)
+	}).(*httptest.Server)
 }
 
 func TestPingServer(t *testing.T) {

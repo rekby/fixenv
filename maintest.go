@@ -12,12 +12,11 @@ type CreateMainTestEnvOpts struct {
 
 func CreateMainTestEnv(opts *CreateMainTestEnvOpts) (env *EnvT, tearDown func()) {
 	globalMutex.Lock()
-	defer globalMutex.Unlock()
+	packageLevelVirtualTest := newVirtualTest(opts)
+	globalMutex.Unlock()
 
-	globalTest := newVirtualTest(opts)
-
-	env = NewEnv(globalTest) // register global test for env
-	return env, globalTest.cleanup
+	env = NewEnv(packageLevelVirtualTest) // register global test for env
+	return env, packageLevelVirtualTest.cleanup
 }
 
 type virtualTest struct {
