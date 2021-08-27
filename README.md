@@ -54,7 +54,7 @@ package example
 // once and same db shared with all tests
 func db(e Env)*DB{...}
 
-// Customer - create customer with random personal data
+// DbCustomer - create customer with random personal data
 // but fixed name. Fixture result shared by test and subtests, 
 // then mean many calls Customer with same name will return same
 // customer object.
@@ -67,7 +67,7 @@ func DbCustomer(e Env, name string) Customer {
 	return cust
 }
 
-// Account create bank account for customer with given name.
+// DbAccount create bank account for customer with given name.
 func DbAccount(e Env, customerName, accountName string)Account{
 	cust := DbCustomer(e, customerName)
 	// ... create account
