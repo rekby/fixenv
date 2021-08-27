@@ -2,6 +2,7 @@ package fixenv
 
 import (
 	"errors"
+	"runtime"
 	"sync"
 	"testing"
 
@@ -229,6 +230,29 @@ func Test_Env_Cache(t *testing.T) {
 			return cnt, nil
 		})
 		at.Equal(1, res)
+	})
+
+	t.Run("different_cache_for_diff_anonim_function", func(t *testing.T) {
+		at := assert.New(t)
+		tMock := &testMock{name: "mock"}
+		e := newTestEnv(tMock)
+
+		cnt := 0
+		func() {
+			res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
+				cnt++
+				return cnt, nil
+			})
+			at.Equal(1, res)
+		}()
+
+		func() {
+			res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
+				cnt++
+				return cnt, nil
+			})
+			at.Equal(2, res)
+		}()
 
 	})
 }
@@ -375,6 +399,81 @@ func Test_MakeCacheKey(t *testing.T) {
 
 	expected := cacheKey(`{"func":"fixenv.Test_MakeCacheKey","fname":".../env_test.go","scope":0,"scope_name":"asdf","params":222}`)
 	at.JSONEq(string(expected), string(res))
+}
+
+func Test_MakeCacheKeyFromFrame(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		at := assert.New(t)
+
+		key, err := makeCacheKeyFromFrame(123, ScopeTest, runtime.Frame{
+			PC:       0,
+			Function: "func_name",
+			File:     "/asd/file_name.go",
+		}, "scope-name", false)
+		at.NoError(err)
+		at.JSONEq(`{
+	"scope": 0,
+	"scope_name": "scope-name",
+	"func": "func_name",
+	"fname": "/asd/file_name.go",
+	"params": 123
+}`, string(key))
+	})
+
+	t.Run("test_call", func(t *testing.T) {
+		at := assert.New(t)
+
+		key, err := makeCacheKeyFromFrame(123, ScopeTest, runtime.Frame{
+			PC:       0,
+			Function: "func_name",
+			File:     "/asd/file_name.go",
+		}, "scope-name", true)
+		at.NoError(err)
+		at.JSONEq(`{
+	"scope": 0,
+	"scope_name": "scope-name",
+	"func": "func_name",
+	"fname": ".../file_name.go",
+	"params": 123
+}`, string(key))
+	})
+
+	t.Run("no_func_name", func(t *testing.T) {
+		at := assert.New(t)
+
+		_, err := makeCacheKeyFromFrame(123, ScopeTest, runtime.Frame{
+			PC:       0,
+			Function: "",
+			File:     "/asd/file_name.go",
+		}, "scope-name", true)
+		at.Error(err)
+	})
+
+	t.Run("no_file_name", func(t *testing.T) {
+		at := assert.New(t)
+
+		_, err := makeCacheKeyFromFrame(123, ScopeTest, runtime.Frame{
+			PC:       0,
+			Function: "func_name",
+			File:     "",
+		}, "scope-name", true)
+		at.Error(err)
+	})
+
+	t.Run("not_serializable_param", func(t *testing.T) {
+		at := assert.New(t)
+
+		type TStruct struct {
+			F func()
+		}
+
+		_, err := makeCacheKeyFromFrame(TStruct{}, ScopeTest, runtime.Frame{
+			PC:       0,
+			Function: "func_name",
+			File:     "/asd/file_name.go",
+		}, "scope-name", true)
+		at.Error(err)
+	})
 }
 
 func Test_ScopeName(t *testing.T) {

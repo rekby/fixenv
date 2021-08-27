@@ -2,6 +2,7 @@ package fixenv
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -107,6 +108,20 @@ func makeCacheKey(testname string, params interface{}, opt *FixtureOptions, test
 		frames.Next()                     // caller of the function
 		extCallerFrame, _ = frames.Next() // external caller
 	}
+	scopeName := scopeName(testname, opt.Scope)
+	return makeCacheKeyFromFrame(params, opt.Scope, extCallerFrame, scopeName, testCall)
+}
+
+func makeCacheKeyFromFrame(params interface{}, scope CacheScope, f runtime.Frame, scopeName string, testCall bool) (cacheKey, error) {
+	switch {
+	case f.Function == "":
+		return "", errors.New("failed to detect caller func name")
+	case f.File == "":
+		return "", errors.New("failed to detect caller func file")
+	default:
+		// pass
+	}
+
 	key := struct {
 		Scope        CacheScope  `json:"scope"`
 		ScopeName    string      `json:"scope_name"`
@@ -114,10 +129,10 @@ func makeCacheKey(testname string, params interface{}, opt *FixtureOptions, test
 		FileName     string      `json:"fname"`
 		Params       interface{} `json:"params"`
 	}{
-		Scope:        opt.Scope,
-		ScopeName:    scopeName(testname, opt.Scope),
-		FunctionName: extCallerFrame.Function,
-		FileName:     extCallerFrame.File,
+		Scope:        scope,
+		ScopeName:    scopeName,
+		FunctionName: f.Function,
+		FileName:     f.File,
 		Params:       params,
 	}
 	if testCall {
@@ -129,6 +144,7 @@ func makeCacheKey(testname string, params interface{}, opt *FixtureOptions, test
 		return "", fmt.Errorf("failed to serialize params to json: %v", err)
 	}
 	return cacheKey(keyBytes), nil
+
 }
 
 func (e *EnvT) fixtureCallWrapper(key cacheKey, f FixtureCallbackFunc, opt *FixtureOptions) FixtureCallbackFunc {
