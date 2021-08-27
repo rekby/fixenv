@@ -57,6 +57,9 @@ func (t *testMock) Fatalf(format string, args ...interface{}) {
 }
 
 func (t *testMock) Name() string {
+	if t.name == "" {
+		return "mock"
+	}
 	return t.name
 }
 
@@ -257,72 +260,6 @@ func Test_Env_Cache(t *testing.T) {
 	})
 }
 
-func Test_Env_Cleanup(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
-		at := assert.New(t)
-
-		t1 := &testMock{name: "mock"}
-		// defer t1.callCleanup - direct call e1.cleanup - for test
-
-		e1 := newTestEnv(t1)
-		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 0)
-		at.Len(e1.c.store, 0)
-
-		e1.Cache(1, nil, func() (res interface{}, err error) {
-			return nil, nil
-		})
-		e1.Cache(2, nil, func() (res interface{}, err error) {
-			return nil, nil
-		})
-		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 2)
-		at.Len(e1.c.store, 2)
-
-		t2 := &testMock{name: "mock2"}
-		// defer t2.callCleanup - direct call e2.cleanup - for test
-
-		e2 := e1.cloneWithTest(t2)
-		at.Len(e1.scopes, 2)
-		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 2)
-		at.Len(e1.scopes[scopeName(t2.name, ScopeTest)].Keys(), 0)
-		at.Len(e1.c.store, 2)
-
-		e2.Cache(1, nil, func() (res interface{}, err error) {
-			return nil, nil
-		})
-
-		at.Len(e1.scopes, 2)
-		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 2)
-		at.Len(e1.scopes[scopeName(t2.name, ScopeTest)].Keys(), 1)
-		at.Len(e1.c.store, 3)
-
-		// finish first test and cleanup e1
-		e1.cleanup()
-		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[scopeName(t2.name, ScopeTest)].Keys(), 1)
-		at.Len(e1.c.store, 1)
-
-		e2.cleanup()
-		at.Len(e1.scopes, 0)
-		at.Len(e1.c.store, 0)
-	})
-
-	t.Run("cleanup on unexisted scope", func(t *testing.T) {
-		at := assert.New(t)
-		tMock := &testMock{name: "mock"}
-		// defer tMock.callCleanups. e.cleanup will call directly for test
-		e := NewEnv(tMock)
-
-		for key := range e.scopes {
-			delete(e.scopes, key)
-		}
-
-		e.cleanup()
-		at.Len(tMock.fatals, 1)
-	})
-}
-
 func Test_FixtureWrapper(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		at := assert.New(t)
@@ -379,10 +316,87 @@ func Test_FixtureWrapper(t *testing.T) {
 	})
 }
 
+func Test_Env_Cleanup(t *testing.T) {
+	at := assert.New(t)
+	tMock := &testMock{}
+
+	e := newTestEnv(tMock)
+	cleanups := len(tMock.cleanups)
+
+	e.Cleanup(func() {})
+	at.Len(tMock.cleanups, cleanups+1)
+}
+
 func Test_Env_T(t *testing.T) {
 	at := assert.New(t)
 	e := NewEnv(t)
 	at.Equal(t, e.T())
+}
+
+func Test_Env_TearDown(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		at := assert.New(t)
+
+		t1 := &testMock{name: "mock"}
+		// defer t1.callCleanup - direct call e1.tearDown - for test
+
+		e1 := newTestEnv(t1)
+		at.Len(e1.scopes, 1)
+		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 0)
+		at.Len(e1.c.store, 0)
+
+		e1.Cache(1, nil, func() (res interface{}, err error) {
+			return nil, nil
+		})
+		e1.Cache(2, nil, func() (res interface{}, err error) {
+			return nil, nil
+		})
+		at.Len(e1.scopes, 1)
+		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 2)
+		at.Len(e1.c.store, 2)
+
+		t2 := &testMock{name: "mock2"}
+		// defer t2.callCleanup - direct call e2.tearDown - for test
+
+		e2 := e1.cloneWithTest(t2)
+		at.Len(e1.scopes, 2)
+		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 2)
+		at.Len(e1.scopes[scopeName(t2.name, ScopeTest)].Keys(), 0)
+		at.Len(e1.c.store, 2)
+
+		e2.Cache(1, nil, func() (res interface{}, err error) {
+			return nil, nil
+		})
+
+		at.Len(e1.scopes, 2)
+		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 2)
+		at.Len(e1.scopes[scopeName(t2.name, ScopeTest)].Keys(), 1)
+		at.Len(e1.c.store, 3)
+
+		// finish first test and tearDown e1
+		e1.tearDown()
+		at.Len(e1.scopes, 1)
+		at.Len(e1.scopes[scopeName(t2.name, ScopeTest)].Keys(), 1)
+		at.Len(e1.c.store, 1)
+
+		e2.tearDown()
+		at.Len(e1.scopes, 0)
+		at.Len(e1.c.store, 0)
+	})
+
+	t.Run("tearDown on unexisted scope", func(t *testing.T) {
+		at := assert.New(t)
+		tMock := &testMock{name: "mock"}
+		// defer tMock.callCleanups. e.tearDown will call directly for test
+		e := NewEnv(tMock)
+
+		for key := range e.scopes {
+			delete(e.scopes, key)
+		}
+
+		e.tearDown()
+		at.Len(tMock.fatals, 1)
+	})
 }
 
 func Test_MakeCacheKey(t *testing.T) {

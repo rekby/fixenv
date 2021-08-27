@@ -68,7 +68,11 @@ func (e *EnvT) Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackF
 	return res
 }
 
-func (e *EnvT) cleanup() {
+func (e *EnvT) Cleanup(f func()) {
+	e.T().Cleanup(f)
+}
+
+func (e *EnvT) tearDown() {
 	e.m.Lock()
 	defer e.m.Unlock()
 
@@ -78,7 +82,7 @@ func (e *EnvT) cleanup() {
 		e.c.DeleteKeys(cacheKeys...)
 		delete(e.scopes, testName)
 	} else {
-		e.t.Fatalf("unexpected call env cleanup for test: %q", testName)
+		e.t.Fatalf("unexpected call env tearDown for test: %q", testName)
 	}
 }
 
@@ -91,7 +95,7 @@ func (e *EnvT) onCreate() {
 		e.t.Fatalf("Env exist already for scope: %q", testName)
 	} else {
 		e.scopes[testName] = newScopeInfo(e.t)
-		e.t.Cleanup(e.cleanup)
+		e.t.Cleanup(e.tearDown)
 	}
 }
 

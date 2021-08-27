@@ -5,7 +5,14 @@ type Env interface {
 	// T - return t object of current test/benchmark.
 	T() T
 
+	// Cache cache result of f calls
+	// f call exactly once for every combination of scope and params
+	// params must be json serializable (deserialize not need)
 	Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
+
+	// Cleanup add callback cleanup function
+	// f called while env clean
+	Cleanup(f func())
 }
 
 type CacheScope int
