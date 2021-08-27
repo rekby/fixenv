@@ -112,18 +112,15 @@ func makeCacheKey(testname string, params interface{}, opt *FixtureOptions, test
 		ScopeName    string      `json:"scope_name"`
 		FunctionName string      `json:"func"`
 		FileName     string      `json:"fname"`
-		LineNum      int         `json:"line"`
 		Params       interface{} `json:"params"`
 	}{
 		Scope:        opt.Scope,
 		ScopeName:    scopeName(testname, opt.Scope),
 		FunctionName: extCallerFrame.Function,
 		FileName:     extCallerFrame.File,
-		LineNum:      extCallerFrame.Line,
 		Params:       params,
 	}
 	if testCall {
-		key.LineNum = 123
 		key.FileName = ".../" + filepath.Base(key.FileName)
 	}
 

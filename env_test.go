@@ -211,6 +211,26 @@ func Test_Env_Cache(t *testing.T) {
 		})
 		at.Len(tMock.fatals, 1)
 	})
+
+	t.Run("cache_by_caller_func", func(t *testing.T) {
+		at := assert.New(t)
+		tMock := &testMock{name: "mock"}
+		e := newTestEnv(tMock)
+
+		cnt := 0
+		res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
+			cnt++
+			return cnt, nil
+		})
+		at.Equal(1, res)
+
+		res = e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
+			cnt++
+			return cnt, nil
+		})
+		at.Equal(1, res)
+
+	})
 }
 
 func Test_Env_Cleanup(t *testing.T) {
@@ -353,7 +373,7 @@ func Test_MakeCacheKey(t *testing.T) {
 	envFunc()
 	at.NoError(err)
 
-	expected := cacheKey(`{"func":"fixenv.Test_MakeCacheKey","fname":".../env_test.go","line":123,"scope":0,"scope_name":"asdf","params":222}`)
+	expected := cacheKey(`{"func":"fixenv.Test_MakeCacheKey","fname":".../env_test.go","scope":0,"scope_name":"asdf","params":222}`)
 	at.JSONEq(string(expected), string(res))
 }
 
