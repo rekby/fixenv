@@ -24,14 +24,11 @@ jobs:
     - name: Test
       run: go test -v -covermode=count -coverprofile=coverage.out ./...
       
-    - name: Coveralls install cover
-      run: go get golang.org/x/tools/cmd/cover
-    
     - name: Coveralls install goveralls
       run: go get github.com/mattn/goveralls
     
     - name: Coveralls push
-      run: goveralls -coverprofile=coverage.out -service=travis-ci -repotoken "$COVERALLS_TOKEN"
+      run: goveralls -coverprofile=coverage.out -service=github
       env:
-        COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
