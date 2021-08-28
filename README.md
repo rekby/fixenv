@@ -1,3 +1,5 @@
+[![Coverage Status](https://coveralls.io/repos/github/rekby/fixenv/badge.svg?branch=master)](https://coveralls.io/github/rekby/fixenv?branch=master)
+
 Go Fixtures
 ===========
 
