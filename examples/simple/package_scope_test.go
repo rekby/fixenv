@@ -1,8 +1,9 @@
 package simple
 
 import (
-	"fixenv"
 	"testing"
+
+	"github.com/rekby/fixenv"
 )
 
 var (

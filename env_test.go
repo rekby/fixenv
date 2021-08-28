@@ -411,7 +411,7 @@ func Test_MakeCacheKey(t *testing.T) {
 	envFunc()
 	at.NoError(err)
 
-	expected := cacheKey(`{"func":"fixenv.Test_MakeCacheKey","fname":".../env_test.go","scope":0,"scope_name":"asdf","params":222}`)
+	expected := cacheKey(`{"func":"github.com/rekby/fixenv.Test_MakeCacheKey","fname":".../env_test.go","scope":0,"scope_name":"asdf","params":222}`)
 	at.JSONEq(string(expected), string(res))
 }
 
