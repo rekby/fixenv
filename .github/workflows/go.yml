@@ -24,11 +24,20 @@ jobs:
     - name: Test
       run: go test -race -covermode atomic -coverprofile=covprofile  ./...
       
+    - name: Ls
+      run: ls -la
+
+    - name: Find
+      run: find . -name covprofile
+      
+    - name: Coveralls install goveralls
+      run: go get github.com/mattn/goveralls
+
     - name: Coveralls install goveralls
       run: go get github.com/mattn/goveralls
     
     - name: Coveralls push
-      run: goveralls -coverprofile=covprofile -service=github
+      run: goveralls -coverprofile=covprofile2 -service=github
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
