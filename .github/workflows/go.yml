@@ -22,13 +22,19 @@ jobs:
       run: go build -v ./...
 
     - name: Test
-      run: go test -v -covermode=count -coverprofile=coverage.out ./...
+      run: go test -race -covermode atomic -coverprofile=covprofile.out  ./...
+      
+    - name: Ls
+      run: ls -la
+
+    - name: Find
+      run: find . -name covprofile.out
       
     - name: Coveralls install goveralls
       run: go get github.com/mattn/goveralls
     
     - name: Coveralls push
-      run: goveralls -coverprofile=coverage.out -service=github
+      run: goveralls -coverprofile=covprofile.out -service=github
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
