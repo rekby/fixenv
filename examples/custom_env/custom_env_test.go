@@ -2,11 +2,12 @@ package custom_env
 
 import (
 	"context"
-	"fixenv"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/rekby/fixenv"
 
 	"github.com/stretchr/testify/assert"
 )
