@@ -22,7 +22,7 @@ func NewEnv(t *testing.T) (context.Context, *Env) {
 	at := assert.New(t)
 	fEnv := fixenv.NewEnv(t)
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	fEnv.Cleanup(func() {
+	t.Cleanup(func() {
 		ctxCancel()
 	})
 	res := &Env{
