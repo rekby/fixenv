@@ -316,17 +316,6 @@ func Test_FixtureWrapper(t *testing.T) {
 	})
 }
 
-func Test_Env_Cleanup(t *testing.T) {
-	at := assert.New(t)
-	tMock := &testMock{}
-
-	e := newTestEnv(tMock)
-	cleanups := len(tMock.cleanups)
-
-	e.Cleanup(func() {})
-	at.Len(tMock.cleanups, cleanups+1)
-}
-
 func Test_Env_T(t *testing.T) {
 	at := assert.New(t)
 	e := NewEnv(t)

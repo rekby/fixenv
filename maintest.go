@@ -6,10 +6,18 @@ import (
 )
 
 type FatalfFunction func(format string, args ...interface{})
+
 type CreateMainTestEnvOpts struct {
+	// Fatalf equivalent of Fatalf in test.
+	// Must write log, then exit from goroutine.
+	// It may be panic.
+	// Fatalf called if main envinment can't continue work
 	Fatalf FatalfFunction
 }
 
+// CreateMainTestEnv called from TestMain for create global environment.
+// It need only for use ScopePackage cache scope.
+// If ScopePackage not used - no need to create main env.
 func CreateMainTestEnv(opts *CreateMainTestEnvOpts) (env *EnvT, tearDown func()) {
 	globalMutex.Lock()
 	packageLevelVirtualTest := newVirtualTest(opts)
@@ -19,6 +27,7 @@ func CreateMainTestEnv(opts *CreateMainTestEnvOpts) (env *EnvT, tearDown func())
 	return env, packageLevelVirtualTest.cleanup
 }
 
+// virtualTest implement T interface for global env scope
 type virtualTest struct {
 	m        sync.Mutex
 	fatalf   FatalfFunction
