@@ -24,8 +24,10 @@ jobs:
     - name: Test
       run: go test -race -covermode atomic -coverprofile=covprofile.out  ./...
       
-    - name: Ls
-      run: ls -la
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v2
+      with:
+        version: latest
 
     - name: Find
       run: find . -name covprofile.out
