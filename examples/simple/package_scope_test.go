@@ -1,6 +1,7 @@
 package simple
 
 import (
+	"os"
 	"testing"
 
 	"github.com/rekby/fixenv"
@@ -11,11 +12,16 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	var exitCode int
+
 	// initialize package env
 	_, cancel := fixenv.CreateMainTestEnv(nil)
-	defer cancel()
+	defer func() {
+		cancel()
+		os.Exit(exitCode)
+	}()
 
-	m.Run()
+	exitCode = m.Run()
 }
 
 // packageCounter fixture will call without cache once only

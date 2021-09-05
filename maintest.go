@@ -5,8 +5,10 @@ import (
 	"sync"
 )
 
+// FatalfFunction function signature of Fatalf
 type FatalfFunction func(format string, args ...interface{})
 
+// CreateMainTestEnvOpts is options for manage package env scope
 type CreateMainTestEnvOpts struct {
 	// Fatalf equivalent of Fatalf in test.
 	// Must write log, then exit from goroutine.

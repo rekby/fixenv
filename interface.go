@@ -40,6 +40,8 @@ type FixtureCallbackFunc func() (res interface{}, err error)
 // fixture value out from lifetime scope
 type FixtureCleanupFunc func()
 
+// FixtureOptions options for fixenv engine
+// for custom manage fixture
 type FixtureOptions struct {
 	// Scope for cache result
 	Scope CacheScope

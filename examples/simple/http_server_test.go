@@ -39,8 +39,8 @@ func TestHttpServer(t *testing.T) {
 	_ = resp.Body.Close()
 	at.Equal("OK", string(body))
 
-	s1_same := testServer(e, "OK")
-	at.Equal(s1, s1_same)
+	s1Same := testServer(e, "OK")
+	at.Equal(s1, s1Same)
 
 	s2 := testServer(e, "PONG")
 	at.NotEqual(s1, s2)
