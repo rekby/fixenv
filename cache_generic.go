@@ -2,9 +2,6 @@
 
 package fixenv
 
-// 	Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
-// type FixtureCallbackFunc func() (res interface{}, err error)
-
 // GetOrSet is generic wrap for env.GetOrSet
 // is experimental and can change any time
 func GetOrSet[Res any](env Env, params any, opt *FixtureOptions, f func() (res Res, err error)) Res {
