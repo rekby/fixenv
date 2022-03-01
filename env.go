@@ -76,9 +76,14 @@ func (e *EnvT) Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackF
 	wrappedF := e.fixtureCallWrapper(key, f, opt)
 	res, err := e.c.GetOrSet(key, wrappedF)
 	if err != nil {
-		e.t.Fatalf("failed to call fixture func: %v", err)
-		// return not reachable after Fatalf
-		return nil
+		if errors.Is(err, ErrSkipTest) {
+			e.T().SkipNow()
+		} else {
+			e.t.Fatalf("failed to call fixture func: %v", err)
+		}
+
+		// panic must be not reachable after SkipNow or Fatalf
+		panic("fixenv: must be unreachable code after err check in fixture cache")
 	}
 
 	return res
@@ -179,14 +184,17 @@ func (e *EnvT) fixtureCallWrapper(key cacheKey, f FixtureCallbackFunc, opt *Fixt
 			// not reachable
 			return nil, nil
 		}
+
 		defer func() {
 			si.AddKey(key)
 		}()
 
 		res, err = f()
+
 		if opt.CleanupFunc != nil {
 			si.t.Cleanup(opt.CleanupFunc)
 		}
+
 		return res, err
 	}
 }

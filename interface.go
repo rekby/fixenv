@@ -1,5 +1,7 @@
 package fixenv
 
+import "errors"
+
 // Env - fixture cache engine.
 type Env interface {
 	// T - return t object of current test/benchmark.
@@ -10,6 +12,16 @@ type Env interface {
 	// params must be json serializable (deserialize not need)
 	Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
 }
+
+var (
+	// ErrSkipTest - error for return from fixtures
+	// return the error mean skip test and cache decision about skip test for feature fixtures call
+	// as usual result/error cache.
+	//
+	// Use special error instead of detect of test.SkipNow() need for prevent run fixture in separate goroutine for
+	// skip detecting
+	ErrSkipTest = errors.New("skip test")
+)
 
 // CacheScope define life time of fixture value
 // and allow use independent fixture values for different scopes, but share same value for
@@ -73,4 +85,20 @@ type T interface {
 	// of any nested sub-tests. If two sibling sub-tests have the same name,
 	// Name will append a suffix to guarantee the returned name is unique.
 	Name() string
+
+	// SkipNow is followed by testing.T.SkipNow().
+	// Don't use SkipNow() for skip test from fixture - use special error ErrSkipTest for it.
+	//
+	// SkipNow marks the test as having been skipped and stops its execution
+	// by calling runtime.Goexit.
+	// If a test fails (see Error, Errorf, Fail) and is then skipped,
+	// it is still considered to have failed.
+	// Execution will continue at the next test or benchmark. See also FailNow.
+	// SkipNow must be called from the goroutine running the test, not from
+	// other goroutines created during the test. Calling SkipNow does not stop
+	// those other goroutines.
+	SkipNow()
+
+	// Skipped reports whether the test was skipped.
+	Skipped() bool
 }

@@ -18,6 +18,7 @@ type testMock struct {
 		format string
 		args   []interface{}
 	}
+	skipCount int
 }
 
 func (e *EnvT) cloneWithTest(t T) *EnvT {
@@ -61,6 +62,21 @@ func (t *testMock) Name() string {
 		return "mock"
 	}
 	return t.name
+}
+
+func (t *testMock) SkipNow() {
+	t.m.Lock()
+	t.skipCount++
+	t.m.Unlock()
+
+	runtime.Goexit()
+}
+
+func (t *testMock) Skipped() bool {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	return t.skipCount > 0
 }
 
 func Test_Env__NewEnv(t *testing.T) {
@@ -194,8 +210,10 @@ func Test_Env_Cache(t *testing.T) {
 
 		e := NewEnv(tMock)
 		at.Len(tMock.fatals, 0)
-		e.Cache(nil, nil, func() (res interface{}, err error) {
-			return nil, errors.New("test")
+		at.Panics(func() {
+			e.Cache(nil, nil, func() (res interface{}, err error) {
+				return nil, errors.New("test")
+			})
 		})
 		at.Len(tMock.fatals, 1)
 	})
@@ -314,6 +332,73 @@ func Test_FixtureWrapper(t *testing.T) {
 		at.Len(tMock.fatals, 1)
 
 	})
+}
+
+func Test_Env_Skip(t *testing.T) {
+	at := assert.New(t)
+	tm := &testMock{name: "mock"}
+	tEnv := newTestEnv(tm)
+
+	skipFixtureCallTimes := 0
+	skipFixture := func() int {
+		res := tEnv.Cache(nil, nil, func() (res interface{}, err error) {
+			skipFixtureCallTimes++
+			return nil, ErrSkipTest
+		})
+		return res.(int)
+	}
+
+	assertGoExit := func(callback func()) {
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		// run in separate goroutine for prevent exit current goroutine
+		go func() {
+			callbackExited := true
+			defer func() {
+				at.True(callbackExited)
+				panicValue := recover()
+
+				// no panic value (go exit)
+				at.Nil(panicValue)
+				wg.Done()
+			}()
+
+			callback()
+			callbackExited = false
+		}()
+
+		wg.Wait()
+	}
+
+	// skip first time - with call fixture
+	executionStarted := false
+	executionStopped := true
+	assertGoExit(func() {
+		executionStarted = true
+		skipFixture()
+
+		executionStopped = false
+	})
+
+	at.True(executionStarted)
+	at.True(executionStopped)
+	at.Equal(1, skipFixtureCallTimes)
+
+	// skip second time, without call fixture - from cache
+	executionStarted = false
+	executionStopped = true
+	assertGoExit(func() {
+		executionStarted = true
+		skipFixture()
+
+		executionStopped = false
+	})
+
+	at.True(executionStarted)
+	at.True(executionStopped)
+	at.Equal(1, skipFixtureCallTimes)
+
 }
 
 func Test_Env_T(t *testing.T) {
