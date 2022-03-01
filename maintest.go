@@ -60,7 +60,8 @@ func newVirtualTest(opts *CreateMainTestEnvOpts) *virtualTest {
 		opts = &CreateMainTestEnvOpts{}
 	}
 	t := &virtualTest{
-		fatalf: opts.Fatalf,
+		fatalf:  opts.Fatalf,
+		skipNow: opts.SkipNow,
 	}
 
 	if t.fatalf == nil {
