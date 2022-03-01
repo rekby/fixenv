@@ -1,5 +1,7 @@
 package fixenv
 
+import "errors"
+
 // Env - fixture cache engine.
 type Env interface {
 	// T - return t object of current test/benchmark.
@@ -10,6 +12,16 @@ type Env interface {
 	// params must be json serializable (deserialize not need)
 	Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
 }
+
+var (
+	// ErrSkipTest - error for return from fixtures
+	// return the error mean skip test and cache decision about skip test for feature fixtures call
+	// as usual result/error cache.
+	//
+	// Use special error instead of detect of test.SkipNow() need for prevent run fixture in separate goroutine for
+	// skip detecting
+	ErrSkipTest = errors.New("skip test")
+)
 
 // CacheScope define life time of fixture value
 // and allow use independent fixture values for different scopes, but share same value for
