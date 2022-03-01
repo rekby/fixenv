@@ -73,4 +73,17 @@ type T interface {
 	// of any nested sub-tests. If two sibling sub-tests have the same name,
 	// Name will append a suffix to guarantee the returned name is unique.
 	Name() string
+
+	// SkipNow marks the test as having been skipped and stops its execution
+	// by calling runtime.Goexit.
+	// If a test fails (see Error, Errorf, Fail) and is then skipped,
+	// it is still considered to have failed.
+	// Execution will continue at the next test or benchmark. See also FailNow.
+	// SkipNow must be called from the goroutine running the test, not from
+	// other goroutines created during the test. Calling SkipNow does not stop
+	// those other goroutines.
+	SkipNow()
+
+	// Skipped reports whether the test was skipped.
+	Skipped() bool
 }

@@ -13,6 +13,10 @@ import (
 const packageScopeName = "TestMain"
 
 var (
+	errSkipTest = errors.New("skip test")
+)
+
+var (
 	globalCache               = newCache()
 	globalEmptyFixtureOptions = &FixtureOptions{}
 
@@ -76,9 +80,14 @@ func (e *EnvT) Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackF
 	wrappedF := e.fixtureCallWrapper(key, f, opt)
 	res, err := e.c.GetOrSet(key, wrappedF)
 	if err != nil {
-		e.t.Fatalf("failed to call fixture func: %v", err)
-		// return not reachable after Fatalf
-		return nil
+		if errors.Is(err, errSkipTest) {
+			e.T().SkipNow()
+		} else {
+			e.t.Fatalf("failed to call fixture func: %v", err)
+		}
+
+		// panic must be not reachable after SkipNow or Fatalf
+		panic("fixenv: must be unreachable code after err check in fixture cache")
 	}
 
 	return res
@@ -181,6 +190,9 @@ func (e *EnvT) fixtureCallWrapper(key cacheKey, f FixtureCallbackFunc, opt *Fixt
 		}
 		defer func() {
 			si.AddKey(key)
+			if e.T().Skipped() && err == nil {
+				err = errSkipTest
+			}
 		}()
 
 		res, err = f()
