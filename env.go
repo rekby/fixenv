@@ -13,7 +13,10 @@ import (
 const packageScopeName = "TestMain"
 
 var (
-	errSkipTest = errors.New("skip test")
+	// ErrSkipTest - error for return from fixtures
+	// return the error mean skip test and cache decision about skip test for feature fixtures call
+	// as usual result/error cache
+	ErrSkipTest = errors.New("skip test")
 )
 
 var (
@@ -80,7 +83,7 @@ func (e *EnvT) Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackF
 	wrappedF := e.fixtureCallWrapper(key, f, opt)
 	res, err := e.c.GetOrSet(key, wrappedF)
 	if err != nil {
-		if errors.Is(err, errSkipTest) {
+		if errors.Is(err, ErrSkipTest) {
 			e.T().SkipNow()
 		} else {
 			e.t.Fatalf("failed to call fixture func: %v", err)
@@ -189,30 +192,15 @@ func (e *EnvT) fixtureCallWrapper(key cacheKey, f FixtureCallbackFunc, opt *Fixt
 			return nil, nil
 		}
 
+		defer func() {
+			si.AddKey(key)
+		}()
+
+		res, err = f()
+
 		if opt.CleanupFunc != nil {
 			si.t.Cleanup(opt.CleanupFunc)
 		}
-
-		fCompleted := false
-		defer func() {
-			si.AddKey(key)
-			if !fCompleted {
-				if e.T().Skipped() {
-					err = errSkipTest
-				} else {
-					err = fmt.Errorf("fixenv: fixture function was not finished (panic/Goexit) with recover value and not skip/fail the test: %v", recover())
-				}
-			}
-		}()
-
-		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			res, err = f()
-			fCompleted = true
-		}()
-		wg.Wait()
 
 		return res, err
 	}

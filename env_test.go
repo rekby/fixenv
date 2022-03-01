@@ -343,10 +343,7 @@ func Test_Env_Skip(t *testing.T) {
 	skipFixture := func() int {
 		res := tEnv.Cache(nil, nil, func() (res interface{}, err error) {
 			skipFixtureCallTimes++
-			tm.SkipNow()
-
-			// unreachable
-			return 1, nil
+			return nil, ErrSkipTest
 		})
 		return res.(int)
 	}
