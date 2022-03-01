@@ -188,17 +188,32 @@ func (e *EnvT) fixtureCallWrapper(key cacheKey, f FixtureCallbackFunc, opt *Fixt
 			// not reachable
 			return nil, nil
 		}
-		defer func() {
-			si.AddKey(key)
-			if e.T().Skipped() && err == nil {
-				err = errSkipTest
-			}
-		}()
 
-		res, err = f()
 		if opt.CleanupFunc != nil {
 			si.t.Cleanup(opt.CleanupFunc)
 		}
+
+		fCompleted := false
+		defer func() {
+			si.AddKey(key)
+			if !fCompleted {
+				if e.T().Skipped() {
+					err = errSkipTest
+				} else {
+					err = fmt.Errorf("fixenv: fixture function was not finished (panic/Goexit) with recover value and not skip/fail the test: %v", recover())
+				}
+			}
+		}()
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			res, err = f()
+			fCompleted = true
+		}()
+		wg.Wait()
+
 		return res, err
 	}
 }
