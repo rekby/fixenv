@@ -15,7 +15,10 @@ const packageScopeName = "TestMain"
 var (
 	// ErrSkipTest - error for return from fixtures
 	// return the error mean skip test and cache decision about skip test for feature fixtures call
-	// as usual result/error cache
+	// as usual result/error cache.
+	//
+	// Use special error instead of detect of test.SkipNow() need for prevent run fixture in separate goroutine for
+	// skip detecting
 	ErrSkipTest = errors.New("skip test")
 )
 

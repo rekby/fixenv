@@ -74,6 +74,9 @@ type T interface {
 	// Name will append a suffix to guarantee the returned name is unique.
 	Name() string
 
+	// SkipNow is followed by testing.T.SkipNow().
+	// Don't use SkipNow() for skip test from fixture - use special error ErrSkipTest for it.
+	//
 	// SkipNow marks the test as having been skipped and stops its execution
 	// by calling runtime.Goexit.
 	// If a test fails (see Error, Errorf, Fail) and is then skipped,
