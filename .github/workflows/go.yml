@@ -30,7 +30,7 @@ jobs:
         version: latest
 
     - name: Coveralls install goveralls
-      run: go get github.com/mattn/goveralls
+      run: go install github.com/mattn/goveralls@latest
     
     - name: Coveralls push
       run: goveralls -coverprofile=covprofile.out -service=github
