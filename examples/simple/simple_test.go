@@ -6,18 +6,13 @@ import (
 	"github.com/rekby/fixenv"
 )
 
-var (
-	globalCounter               = 0
-	globalTestAndSubtestCounter = 0
-)
-
 // counter fixture - increment globalCounter every non cached call
 // and return new globalCounter value
 func counter(e fixenv.Env) int {
-	return e.Cache(nil, nil, func() (res interface{}, err error) {
+	return fixenv.Cache(e, "", nil, func() (res int, err error) {
 		globalCounter++
 		return globalCounter, nil
-	}).(int)
+	})
 }
 
 func TestCounter(t *testing.T) {
@@ -41,12 +36,12 @@ func TestCounter(t *testing.T) {
 // counterTestAndSubtest increment counter every non cached call
 // and cache result for top level test and all of subtests
 func counterTestAndSubtest(e fixenv.Env) int {
-	return e.Cache(nil, &fixenv.FixtureOptions{
+	return fixenv.Cache(e, "", &fixenv.FixtureOptions{
 		Scope: fixenv.ScopeTestAndSubtests,
-	}, func() (res interface{}, err error) {
+	}, func() (res int, err error) {
 		globalTestAndSubtestCounter++
 		return globalTestAndSubtestCounter, nil
-	}).(int)
+	})
 }
 
 func TestTestAndSubtestCounter(t *testing.T) {

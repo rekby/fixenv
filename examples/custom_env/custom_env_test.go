@@ -34,7 +34,7 @@ func NewEnv(t *testing.T) (context.Context, *Env) {
 }
 
 func testServer(e fixenv.Env, response string) *httptest.Server {
-	return e.Cache(response, nil, func() (res interface{}, err error) {
+	return fixenv.Cache(e, response, nil, func() (_ *httptest.Server, err error) {
 		resp := []byte(response)
 
 		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -46,7 +46,7 @@ func testServer(e fixenv.Env, response string) *httptest.Server {
 			e.T().(testing.TB).Logf("Http server stop. %q url: %q", response, server.URL)
 		})
 		return server, nil
-	}).(*httptest.Server)
+	})
 }
 
 func TestHttpServerSelfEnv(t *testing.T) {
