@@ -12,7 +12,10 @@ jobs:
       GO_VERSION: "1.18"
     strategy:
       matrix:
-        goVersion: [ "1.16", "1.17", ${{ env.GO_VERSION }} ]
+        goVersion:
+          - "1.16"
+          - "1.17"
+          - "${{ env.GO_VERSION }}"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
