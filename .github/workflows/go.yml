@@ -7,8 +7,12 @@ on:
     branches: [ master ]
 
 jobs:
-
   test:
+    env:
+      GO_VERSION: "1.18"
+    strategy:
+      matrix:
+        goVersion: [ "1.16", "1.17", ${{ env.GO_VERSION }} ]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -16,7 +20,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.18
+        go-version: ${{ matrix.goVersion }}
 
     - name: Build
       run: go build -v ./...
@@ -30,9 +34,11 @@ jobs:
         version: latest
 
     - name: Coveralls install goveralls
+      if: ${{ matrix.goVersion == env.GO_VERSION }}
       run: go install github.com/mattn/goveralls@latest
     
     - name: Coveralls push
+      if: ${{ matrix.goVersion == env.GO_VERSION }}
       run: goveralls -coverprofile=covprofile.out -service=github
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
