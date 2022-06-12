@@ -14,3 +14,15 @@ func Cache[TRes any](env Env, params any, opt *FixtureOptions, f func() (TRes, e
 	}
 	return res
 }
+
+func CacheWithCleanup[TRes any](env Env, params any, opt *FixtureOptions, f func() (TRes, FixtureCleanupFunc, error)) TRes {
+	callbackResult := env.CacheWithCleanup(params, opt, func() (res interface{}, cleanup FixtureCleanupFunc, err error) {
+		return f()
+	})
+
+	var res TRes
+	if callbackResult != nil {
+		res = callbackResult.(TRes)
+	}
+	return res
+}

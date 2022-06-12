@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testMock struct {
@@ -278,6 +279,58 @@ func Test_Env_Cache(t *testing.T) {
 	})
 }
 
+func Test_Env_CacheWithCleanup(t *testing.T) {
+	t.Run("NilCleanup", func(t *testing.T) {
+		tMock := &testMock{name: t.Name()}
+		env := newTestEnv(tMock)
+
+		callbackCalled := 0
+		var callbackFunc FixtureCallbackWithCleanupFunc = func() (res interface{}, cleanup FixtureCleanupFunc, err error) {
+			callbackCalled++
+			return callbackCalled, nil, nil
+		}
+
+		res := env.CacheWithCleanup(nil, nil, callbackFunc)
+		require.Equal(t, 1, res)
+		require.Equal(t, 1, callbackCalled)
+
+		// got value from cache
+		res = env.CacheWithCleanup(nil, nil, callbackFunc)
+		require.Equal(t, 1, res)
+		require.Equal(t, 1, callbackCalled)
+	})
+
+	t.Run("WithCleanup", func(t *testing.T) {
+		tMock := &testMock{name: t.Name()}
+		env := newTestEnv(tMock)
+
+		callbackCalled := 0
+		cleanupCalled := 0
+		var callbackFunc FixtureCallbackWithCleanupFunc = func() (res interface{}, cleanup FixtureCleanupFunc, err error) {
+			callbackCalled++
+			cleanup = func() {
+				cleanupCalled++
+			}
+			return callbackCalled, cleanup, nil
+		}
+
+		res := env.CacheWithCleanup(nil, nil, callbackFunc)
+		require.Equal(t, 1, res)
+		require.Equal(t, 1, callbackCalled)
+		require.Equal(t, cleanupCalled, 0)
+
+		// got value from cache
+		res = env.CacheWithCleanup(nil, nil, callbackFunc)
+		require.Equal(t, 1, res)
+		require.Equal(t, 1, callbackCalled)
+		require.Equal(t, cleanupCalled, 0)
+
+		tMock.callCleanup()
+		require.Equal(t, 1, callbackCalled)
+		require.Equal(t, 1, cleanupCalled)
+	})
+}
+
 func Test_FixtureWrapper(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		at := assert.New(t)
@@ -293,7 +346,7 @@ func Test_FixtureWrapper(t *testing.T) {
 			cnt++
 			return cnt, errors.New("test")
 		}, &FixtureOptions{})
-		si := e.scopes[scopeName(tMock.Name(), ScopeTest)]
+		si := e.scopes[makeScopeName(tMock.Name(), ScopeTest)]
 		at.Equal(0, cnt)
 		at.Len(si.cacheKeys, 0)
 		res1, err := w()
@@ -308,7 +361,7 @@ func Test_FixtureWrapper(t *testing.T) {
 		w = e.fixtureCallWrapper(key2, func() (res interface{}, err error) {
 			cnt++
 			return cnt, nil
-		}, &FixtureOptions{CleanupFunc: func() {
+		}, &FixtureOptions{cleanupFunc: func() {
 
 		}})
 		at.Len(tMock.cleanups, cleanupsLen)
@@ -416,7 +469,7 @@ func Test_Env_TearDown(t *testing.T) {
 
 		e1 := newTestEnv(t1)
 		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 0)
+		at.Len(e1.scopes[makeScopeName(t1.name, ScopeTest)].Keys(), 0)
 		at.Len(e1.c.store, 0)
 
 		e1.Cache(1, nil, func() (res interface{}, err error) {
@@ -426,7 +479,7 @@ func Test_Env_TearDown(t *testing.T) {
 			return nil, nil
 		})
 		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 2)
+		at.Len(e1.scopes[makeScopeName(t1.name, ScopeTest)].Keys(), 2)
 		at.Len(e1.c.store, 2)
 
 		t2 := &testMock{name: "mock2"}
@@ -434,8 +487,8 @@ func Test_Env_TearDown(t *testing.T) {
 
 		e2 := e1.cloneWithTest(t2)
 		at.Len(e1.scopes, 2)
-		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 2)
-		at.Len(e1.scopes[scopeName(t2.name, ScopeTest)].Keys(), 0)
+		at.Len(e1.scopes[makeScopeName(t1.name, ScopeTest)].Keys(), 2)
+		at.Len(e1.scopes[makeScopeName(t2.name, ScopeTest)].Keys(), 0)
 		at.Len(e1.c.store, 2)
 
 		e2.Cache(1, nil, func() (res interface{}, err error) {
@@ -443,14 +496,14 @@ func Test_Env_TearDown(t *testing.T) {
 		})
 
 		at.Len(e1.scopes, 2)
-		at.Len(e1.scopes[scopeName(t1.name, ScopeTest)].Keys(), 2)
-		at.Len(e1.scopes[scopeName(t2.name, ScopeTest)].Keys(), 1)
+		at.Len(e1.scopes[makeScopeName(t1.name, ScopeTest)].Keys(), 2)
+		at.Len(e1.scopes[makeScopeName(t2.name, ScopeTest)].Keys(), 1)
 		at.Len(e1.c.store, 3)
 
 		// finish first test and tearDown e1
 		e1.tearDown()
 		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[scopeName(t2.name, ScopeTest)].Keys(), 1)
+		at.Len(e1.scopes[makeScopeName(t2.name, ScopeTest)].Keys(), 1)
 		at.Len(e1.c.store, 1)
 
 		e2.tearDown()
@@ -479,10 +532,14 @@ func Test_MakeCacheKey(t *testing.T) {
 	var res cacheKey
 	var err error
 
-	envFunc := func() {
+	privateEnvFunc := func() {
 		res, err = makeCacheKey("asdf", 222, globalEmptyFixtureOptions, true)
 	}
-	envFunc()
+
+	publicEnvFunc := func() {
+		privateEnvFunc()
+	}
+	publicEnvFunc() // external caller
 	at.NoError(err)
 
 	expected := cacheKey(`{"func":"github.com/rekby/fixenv.Test_MakeCacheKey","fname":".../env_test.go","scope":0,"scope_name":"asdf","params":222}`)
@@ -601,7 +658,7 @@ func Test_ScopeName(t *testing.T) {
 		for _, c := range table {
 			t.Run(c.name, func(t *testing.T) {
 				at := assert.New(t)
-				at.Equal(c.result, scopeName(c.testName, c.scope))
+				at.Equal(c.result, makeScopeName(c.testName, c.scope))
 			})
 		}
 	})
@@ -609,7 +666,7 @@ func Test_ScopeName(t *testing.T) {
 	t.Run("unexpected_scope", func(t *testing.T) {
 		at := assert.New(t)
 		at.Panics(func() {
-			scopeName("asd", -1)
+			makeScopeName("asd", -1)
 		})
 	})
 }
