@@ -3,7 +3,7 @@
 
 package fixenv
 
-func Cache[TEnv Env, TRes any](env TEnv, params any, opt *FixtureOptions, f func() (TRes, error)) TRes {
+func Cache[TRes any](env Env, params any, opt *FixtureOptions, f func() (TRes, error)) TRes {
 	callbackResult := env.Cache(params, opt, func() (res interface{}, err error) {
 		return f()
 	})
