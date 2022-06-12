@@ -81,9 +81,6 @@ func (e *EnvT) CacheWithCleanup(params interface{}, opt *FixtureOptions, f Fixtu
 	if opt == nil {
 		opt = &FixtureOptions{}
 	}
-	if opt.cleanupFunc != nil {
-		e.t.Fatalf("CacheWithCleanup not compatible with CleanupFunc param")
-	}
 
 	var resCleanupFunc FixtureCleanupFunc
 
