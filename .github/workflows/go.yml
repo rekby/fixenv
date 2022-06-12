@@ -36,7 +36,6 @@ jobs:
       run: go test -test.count=10 -race -covermode atomic -coverprofile=covprofile.out  ./...
 
     - name: golangci-lint
-      if: ${{ matrix.goVersion == env.GO_VERSION }}
       uses: golangci/golangci-lint-action@v2
       with:
         version: latest
