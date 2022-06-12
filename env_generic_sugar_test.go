@@ -27,7 +27,8 @@ func TestCacheGeneric(t *testing.T) {
 }
 
 type envMock struct {
-	onCache func(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
+	onCache            func(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
+	onCacheWithCleanup func(params interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{}
 }
 
 func (e envMock) T() T {
@@ -36,4 +37,8 @@ func (e envMock) T() T {
 
 func (e envMock) Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{} {
 	return e.onCache(params, opt, f)
+}
+
+func (e envMock) CacheWithCleanup(params interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{} {
+	return e.onCacheWithCleanup(params, opt, f)
 }

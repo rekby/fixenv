@@ -27,16 +27,16 @@ func NewEnv(t *testing.T) *Env {
 }
 
 func testServer(e *Env) *httptest.Server {
-	return fixenv.Cache(e, "", nil, func() (res *httptest.Server, err error) {
+	return fixenv.CacheWithCleanup(e, "", nil, func() (res *httptest.Server, cleanup fixenv.FixtureCleanupFunc, err error) {
 		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			_, _ = writer.Write([]byte(e.Resp))
 		}))
 		e.T().(testing.TB).Logf("Http server start, url: %q", server.URL)
-		e.T().Cleanup(func() {
+		cleanup = func() {
 			server.Close()
 			e.T().(testing.TB).Logf("Http server stop, url: %q", server.URL)
-		})
-		return server, nil
+		}
+		return server, cleanup, nil
 	})
 }
 
