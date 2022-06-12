@@ -2,6 +2,7 @@ package fixenv
 
 import (
 	"errors"
+	"strconv"
 	"sync"
 )
 
@@ -12,6 +13,10 @@ type cache struct {
 }
 
 type cacheKey string
+
+func (key *cacheKey) AppendNocacheCounter(counter int) {
+	*key = cacheKey(string(*key) + "-nocache-" + strconv.Itoa(counter))
+}
 
 type cacheVal struct {
 	res interface{}

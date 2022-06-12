@@ -2,6 +2,7 @@ package fixenv
 
 import (
 	"errors"
+	"regexp"
 	"runtime"
 	"sync"
 	"testing"
@@ -145,6 +146,29 @@ func Test_Env_Cache(t *testing.T) {
 
 		val = 2
 		at.Equal(1, cntF())
+	})
+
+	t.Run("NoCache", func(t *testing.T) {
+		tMock := &testMock{name: t.Name()}
+		env := newTestEnv(tMock)
+		calledTimes := 0
+
+		fixture := func(e Env) int {
+			return e.Cache(nil, &FixtureOptions{NoCache: true}, func() (res interface{}, err error) {
+				calledTimes++
+				return calledTimes, nil
+			}).(int)
+		}
+
+		require.Equal(t, 0, calledTimes)
+
+		require.Equal(t, 1, fixture(env))
+		require.Equal(t, 1, calledTimes)
+
+		// double, no cache
+		require.Equal(t, 2, fixture(env))
+		require.Equal(t, 2, calledTimes)
+
 	})
 
 	t.Run("subtest_and_test_scope", func(t *testing.T) {
@@ -655,10 +679,14 @@ func Test_ScopeName(t *testing.T) {
 			},
 		}
 
+		noCacheRe := regexp.MustCompile(`-nocache-.*`)
+
 		for _, c := range table {
 			t.Run(c.name, func(t *testing.T) {
 				at := assert.New(t)
-				at.Equal(c.result, makeScopeName(c.testName, c.scope))
+				name := makeScopeName(c.testName, c.scope)
+				noCacheRe.ReplaceAllString(name, "-nocache-XXX")
+				at.Equal(c.result, name)
 			})
 		}
 	})
