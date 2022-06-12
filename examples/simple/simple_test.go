@@ -12,7 +12,7 @@ import (
 // counter fixture - increment globalCounter every non cached call
 // and return new globalCounter value
 func counter(e fixenv.Env) int {
-	return fixenv.Cache(e, "", nil, func() (res int, err error) {
+	return fixenv.Cache(e, nil, nil, func() (res int, err error) {
 		globalCounter++
 		return globalCounter, nil
 	})
