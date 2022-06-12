@@ -72,6 +72,8 @@ type FixtureOptions struct {
 	// Scope for cache result
 	Scope CacheScope
 
+	additionlSkipExternalCalls int
+
 	// cleanupFunc if not nil - called for cleanup fixture results
 	// internal implementation details
 	cleanupFunc FixtureCleanupFunc

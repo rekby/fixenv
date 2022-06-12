@@ -159,7 +159,7 @@ func makeCacheKey(testname string, params interface{}, opt *FixtureOptions, test
 	externalCallerLevel := 5
 	var pc = make([]uintptr, externalCallerLevel)
 	var extCallerFrame runtime.Frame
-	if externalCallerLevel == runtime.Callers(0, pc) {
+	if externalCallerLevel == runtime.Callers(opt.additionlSkipExternalCalls, pc) {
 		frames := runtime.CallersFrames(pc)
 		frames.Next()                     // callers
 		frames.Next()                     // the function
