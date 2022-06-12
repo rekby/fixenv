@@ -40,10 +40,10 @@ const (
 
 	// ScopePackage mean fixture function with same parameters called once per package
 	// for use the scope with TearDown function developer must initialize global handler and cleaner at TestMain.
-	ScopePackage
+	ScopePackage CacheScope = iota
 
 	// ScopeTestAndSubtests mean fixture cached for top level test and subtests
-	ScopeTestAndSubtests
+	ScopeTestAndSubtests CacheScope = iota
 )
 
 // FixtureCallbackFunc - function, which result can cached
@@ -71,10 +71,6 @@ type FixtureCleanupFunc func()
 type FixtureOptions struct {
 	// Scope for cache result
 	Scope CacheScope
-
-	// NoCache mean result will not cached
-	// in the case fiexenv used for lifetime manages, or simple to common code style
-	NoCache bool
 
 	// cleanupFunc if not nil - called for cleanup fixture results
 	// internal implementation details
