@@ -282,7 +282,7 @@ func Test_Env_Cache(t *testing.T) {
 func Test_Env_CacheWithCleanup(t *testing.T) {
 	t.Run("NilCleanup", func(t *testing.T) {
 		tMock := &testMock{name: t.Name()}
-		env := NewEnv(tMock)
+		env := newTestEnv(tMock)
 
 		callbackCalled := 0
 		var callbackFunc FixtureCallbackWithCleanupFunc = func() (res interface{}, cleanup FixtureCleanupFunc, err error) {
@@ -302,7 +302,7 @@ func Test_Env_CacheWithCleanup(t *testing.T) {
 
 	t.Run("WithCleanup", func(t *testing.T) {
 		tMock := &testMock{name: t.Name()}
-		env := NewEnv(tMock)
+		env := newTestEnv(tMock)
 
 		callbackCalled := 0
 		cleanupCalled := 0
