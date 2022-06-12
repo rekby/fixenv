@@ -29,9 +29,8 @@ type EnvT struct {
 	t T
 	c *cache
 
-	m       sync.Locker
-	scopes  map[string]*scopeInfo
-	counter int
+	m      sync.Locker
+	scopes map[string]*scopeInfo
 }
 
 // NewEnv create EnvT from test
@@ -102,19 +101,12 @@ func (e *EnvT) cache(params interface{}, opt *FixtureOptions, f FixtureCallbackF
 	if opt == nil {
 		opt = globalEmptyFixtureOptions
 	}
-
 	key, err := makeCacheKey(e.t.Name(), params, opt, false)
 	if err != nil {
 		e.t.Fatalf("failed to create cache key: %v", err)
 		// return not reacheble after Fatalf
 		return nil
 	}
-
-	if opt.NoCache {
-		e.counter++
-		key.AppendNocacheCounter(e.counter)
-	}
-
 	wrappedF := e.fixtureCallWrapper(key, f, opt)
 	res, err := e.c.GetOrSet(key, wrappedF)
 	if err != nil {
