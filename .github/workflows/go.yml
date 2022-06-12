@@ -29,8 +29,13 @@ jobs:
       run: go build -v ./...
 
     - name: Test
+      if: ${{ matrix.goVersion != env.GO_VERSION }}
+      run: go test ./...
+
+    - name: Test with coverage profiler
+      if: ${{ matrix.goVersion == env.GO_VERSION }}
       run: go test -test.count=10 -race -covermode atomic -coverprofile=covprofile.out  ./...
-      
+
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v2
       with:
