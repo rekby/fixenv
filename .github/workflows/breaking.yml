@@ -1,0 +1,45 @@
+# This script based on github.com/bool64/dev.
+
+name: check-api-changes
+on:
+  - pull_request
+  - push
+
+jobs:
+  gorelease:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "stable"
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install gorelease
+        run: go install golang.org/x/exp/cmd/gorelease@latest
+
+      - name: Install egrep
+        run: which egrep || apt install egrep
+
+      - name: Check API changes
+        id: gorelease
+        run: |
+          OUTPUT=$(gorelease -base=latest || true);
+          OUTPUT=$(echo "$OUTPUT" | egrep -v "^.*from .*\/internal\/.* to .*\/internal\/.*$");
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=report::$OUTPUT";
+
+      - name: Comment Report
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          header: gorelease
+          message: |
+            ### API Changes
+            
+            ${{ steps.gorelease.outputs.report }}
