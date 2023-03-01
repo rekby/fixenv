@@ -120,7 +120,9 @@ func Test_Env__NewEnv(t *testing.T) {
 		_ = NewEnv(tMock)
 		at.Len(tMock.fatals, 0)
 
-		_ = NewEnv(tMock)
+		runUntilFatal(func() {
+			_ = NewEnv(tMock)
+		})
 		at.Len(tMock.fatals, 1)
 	})
 
@@ -139,6 +141,7 @@ func testFailedFixture(env Env) {
 		return nil, errors.New("test error")
 	})
 }
+
 func Test_Env_Cache(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
 		at := assert.New(t)
@@ -225,21 +228,13 @@ func Test_Env_Cache(t *testing.T) {
 		e := NewEnv(tMock)
 		at.Len(tMock.fatals, 0)
 
-		fatalChecked := make(chan bool)
-		go func() {
-			// t.Fatal, it will stop work goroutine
-			defer func() {
-				at.Len(tMock.fatals, 1)
-
-				// log message contains fixture name
-				at.Contains(tMock.fatals[0].resultString, "testFailedFixture")
-				close(fatalChecked)
-			}()
-
+		runUntilFatal(func() {
 			testFailedFixture(e)
+		})
+		at.Len(tMock.fatals, 1)
 
-		}()
-		<-fatalChecked
+		// log message contains fixture name
+		at.Contains(tMock.fatals[0].resultString, "testFailedFixture")
 	})
 
 	t.Run("not_serializable_param", func(t *testing.T) {
@@ -252,8 +247,10 @@ func Test_Env_Cache(t *testing.T) {
 		tMock := &testMock{}
 		defer tMock.callCleanup()
 		e := NewEnv(tMock)
-		e.Cache(param, nil, func() (res interface{}, err error) {
-			return nil, nil
+		runUntilFatal(func() {
+			e.Cache(param, nil, func() (res interface{}, err error) {
+				return nil, nil
+			})
 		})
 		at.Len(tMock.fatals, 1)
 	})
@@ -399,14 +396,18 @@ func Test_FixtureWrapper(t *testing.T) {
 		tMock := &testMock{name: "mock"}
 		defer tMock.callCleanup()
 		e := newTestEnv(tMock)
-		tMock.name = "mock2"
 
+		tMock.name = "mock2"
 		w := e.fixtureCallWrapper("asd", func() (res interface{}, err error) {
 			return nil, nil
 		}, &FixtureOptions{})
-		_, _ = w()
-		at.Len(tMock.fatals, 1)
+		runUntilFatal(func() {
+			_, _ = w()
+		})
 
+		// revert test name for good cleanup
+		tMock.name = "mock"
+		at.Len(tMock.fatals, 1)
 	})
 }
 
@@ -544,7 +545,8 @@ func Test_Env_TearDown(t *testing.T) {
 			delete(e.scopes, key)
 		}
 
-		e.tearDown()
+		runUntilFatal(e.tearDown)
+
 		at.Len(tMock.fatals, 1)
 	})
 }
@@ -692,4 +694,16 @@ func Test_ScopeName(t *testing.T) {
 			makeScopeName("asd", -1)
 		})
 	})
+}
+
+func runUntilFatal(f func()) {
+	stopped := make(chan bool)
+	go func() {
+		defer func() {
+			_ = recover()
+			close(stopped)
+		}()
+		f()
+	}()
+	<-stopped
 }
