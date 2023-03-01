@@ -58,8 +58,10 @@ func (e *EnvT) T() T {
 // Cache must be called direct from fixture - it use runtime stacktrace for
 // detect called method - it is part of cache key.
 // params - part of cache key. Usually - parameters, passed to fixture.
-//          it allow use parametrized fixtures with different results.
-//          params must be json serializable.
+//
+//	it allow use parametrized fixtures with different results.
+//	params must be json serializable.
+//
 // opt - fixture options, nil for default options.
 // f - callback - fixture body.
 // Cache guarantee for call f exactly once for same Cache called and params combination.
@@ -71,8 +73,10 @@ func (e *EnvT) Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackF
 // CacheWithCleanup must be called direct from fixture - it use runtime stacktrace for
 // detect called method - it is part of cache key.
 // params - part of cache key. Usually - parameters, passed to fixture.
-//          it allow use parametrized fixtures with different results.
-//          params must be json serializable.
+//
+//	it allow use parametrized fixtures with different results.
+//	params must be json serializable.
+//
 // opt - fixture options, nil for default options.
 // f - callback - fixture body.
 // cleanup, returned from f called while fixture cleanup
@@ -107,13 +111,32 @@ func (e *EnvT) cache(params interface{}, opt *FixtureOptions, f FixtureCallbackF
 		// return not reacheble after Fatalf
 		return nil
 	}
+
 	wrappedF := e.fixtureCallWrapper(key, f, opt)
 	res, err := e.c.GetOrSet(key, wrappedF)
 	if err != nil {
 		if errors.Is(err, ErrSkipTest) {
 			e.T().SkipNow()
 		} else {
-			e.t.Fatalf("failed to call fixture func: %v", err)
+			// Get fixture name
+			externalCallerLevel := 4
+			var pc = make([]uintptr, externalCallerLevel)
+			var extCallerFrame runtime.Frame
+			if externalCallerLevel == runtime.Callers(opt.additionlSkipExternalCalls, pc) {
+				frames := runtime.CallersFrames(pc)
+				frames.Next()                     // callers
+				frames.Next()                     // the function
+				frames.Next()                     // caller of the function (env private function)
+				extCallerFrame, _ = frames.Next() // external caller
+			}
+
+			fixtureDesctiption := fmt.Sprintf(
+				"%v (%v:%v)",
+				extCallerFrame.Function,
+				extCallerFrame.File,
+				extCallerFrame.Line,
+			)
+			e.t.Fatalf("failed to call fixture func \"%v\": %v", fixtureDesctiption, err)
 		}
 
 		// panic must be not reachable after SkipNow or Fatalf
