@@ -40,10 +40,10 @@ const (
 
 	// ScopePackage mean fixture function with same parameters called once per package
 	// for use the scope with TearDown function developer must initialize global handler and cleaner at TestMain.
-	ScopePackage CacheScope = iota
+	ScopePackage
 
 	// ScopeTestAndSubtests mean fixture cached for top level test and subtests
-	ScopeTestAndSubtests CacheScope = iota
+	ScopeTestAndSubtests
 )
 
 // FixtureCallbackFunc - function, which result can cached
