@@ -13,12 +13,24 @@ import (
 const packageScopeName = "TestMain"
 
 var (
-	globalCache               = newCache()
+	globalCache               *cache
+	globalEmptyFixtureOptions *FixtureOptions
+
+	globalMutex     sync.Mutex
+	globalScopeInfo map[string]*scopeInfo
+)
+
+func initGlobalState() {
+	globalCache = newCache()
 	globalEmptyFixtureOptions = &FixtureOptions{}
 
-	globalMutex     = &sync.Mutex{}
+	globalMutex = sync.Mutex{}
 	globalScopeInfo = make(map[string]*scopeInfo)
-)
+}
+
+func init() {
+	initGlobalState()
+}
 
 // EnvT - fixture cache and cleanup engine
 // it created from test and pass to fixture function
@@ -35,7 +47,7 @@ type EnvT struct {
 
 // NewEnv create EnvT from test
 func NewEnv(t T) *EnvT {
-	env := newEnv(t, globalCache, globalMutex, globalScopeInfo)
+	env := newEnv(t, globalCache, &globalMutex, globalScopeInfo)
 	env.onCreate()
 	return env
 }

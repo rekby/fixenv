@@ -95,6 +95,7 @@ func (t *testMock) Skipped() bool {
 
 func Test_Env__NewEnv(t *testing.T) {
 	t.Run("create_new_env", func(t *testing.T) {
+		initGlobalState()
 		at := assert.New(t)
 
 		tMock := &testMock{TestName: "mock"}
@@ -103,7 +104,7 @@ func Test_Env__NewEnv(t *testing.T) {
 		e := NewEnv(tMock)
 		at.Equal(tMock, e.t)
 		at.Equal(globalCache, e.c)
-		at.Equal(globalMutex, e.m)
+		at.Equal(&globalMutex, e.m)
 		at.Equal(globalScopeInfo, e.scopes)
 		at.Len(globalCache.store, 0)
 		at.Len(globalScopeInfo, 1)
