@@ -12,7 +12,8 @@ import (
 )
 
 type testMock struct {
-	name string
+	TestName   string
+	SkipGoexit bool
 
 	m        sync.Mutex
 	cleanups []func()
@@ -63,14 +64,16 @@ func (t *testMock) Fatalf(format string, args ...interface{}) {
 		resultString: fmt.Sprintf(format, args...),
 	})
 
-	runtime.Goexit()
+	if !t.SkipGoexit {
+		runtime.Goexit()
+	}
 }
 
 func (t *testMock) Name() string {
-	if t.name == "" {
+	if t.TestName == "" {
 		return "mock"
 	}
-	return t.name
+	return t.TestName
 }
 
 func (t *testMock) SkipNow() {
@@ -78,7 +81,9 @@ func (t *testMock) SkipNow() {
 	t.skipCount++
 	t.m.Unlock()
 
-	runtime.Goexit()
+	if !t.SkipGoexit {
+		runtime.Goexit()
+	}
 }
 
 func (t *testMock) Skipped() bool {
@@ -92,7 +97,7 @@ func Test_Env__NewEnv(t *testing.T) {
 	t.Run("create_new_env", func(t *testing.T) {
 		at := assert.New(t)
 
-		tMock := &testMock{name: "mock"}
+		tMock := &testMock{TestName: "mock"}
 		defer tMock.callCleanup()
 
 		e := NewEnv(tMock)
@@ -114,7 +119,7 @@ func Test_Env__NewEnv(t *testing.T) {
 	t.Run("double_env_same_scope_same_time", func(t *testing.T) {
 		at := assert.New(t)
 
-		tMock := &testMock{name: "mock"}
+		tMock := &testMock{TestName: "mock"}
 		defer tMock.callCleanup()
 
 		_ = NewEnv(tMock)
@@ -222,10 +227,10 @@ func Test_Env_Cache(t *testing.T) {
 	t.Run("fail_on_fixture_err", func(t *testing.T) {
 		at := assert.New(t)
 
-		tMock := &testMock{name: "mock"}
+		tMock := &testMock{TestName: "mock"}
 		defer tMock.callCleanup()
 
-		e := NewEnv(tMock)
+		e := newTestEnv(tMock)
 		at.Len(tMock.fatals, 0)
 
 		runUntilFatal(func() {
@@ -244,9 +249,9 @@ func Test_Env_Cache(t *testing.T) {
 			F func() // can't serialize func to json
 		}
 		param := paramT{}
-		tMock := &testMock{}
+		tMock := &testMock{TestName: "mock"}
 		defer tMock.callCleanup()
-		e := NewEnv(tMock)
+		e := newTestEnv(tMock)
 		runUntilFatal(func() {
 			e.Cache(param, nil, func() (res interface{}, err error) {
 				return nil, nil
@@ -257,7 +262,7 @@ func Test_Env_Cache(t *testing.T) {
 
 	t.Run("cache_by_caller_func", func(t *testing.T) {
 		at := assert.New(t)
-		tMock := &testMock{name: "mock"}
+		tMock := &testMock{TestName: "mock"}
 		e := newTestEnv(tMock)
 
 		cnt := 0
@@ -276,7 +281,7 @@ func Test_Env_Cache(t *testing.T) {
 
 	t.Run("different_cache_for_diff_anonim_function", func(t *testing.T) {
 		at := assert.New(t)
-		tMock := &testMock{name: "mock"}
+		tMock := &testMock{TestName: "mock"}
 		e := newTestEnv(tMock)
 
 		cnt := 0
@@ -297,11 +302,24 @@ func Test_Env_Cache(t *testing.T) {
 		}()
 
 	})
+
+	t.Run("check_unreachable_code", func(t *testing.T) {
+		at := assert.New(t)
+
+		tMock := &testMock{TestName: "mock", SkipGoexit: true}
+		e := NewEnv(tMock)
+		at.Panics(func() {
+			e.Cache(nil, nil, func() (res interface{}, err error) {
+				return nil, ErrSkipTest
+			})
+		})
+		at.Equal(1, tMock.skipCount)
+	})
 }
 
 func Test_Env_CacheWithCleanup(t *testing.T) {
 	t.Run("NilCleanup", func(t *testing.T) {
-		tMock := &testMock{name: t.Name()}
+		tMock := &testMock{TestName: t.Name()}
 		env := newTestEnv(tMock)
 
 		callbackCalled := 0
@@ -321,7 +339,7 @@ func Test_Env_CacheWithCleanup(t *testing.T) {
 	})
 
 	t.Run("WithCleanup", func(t *testing.T) {
-		tMock := &testMock{name: t.Name()}
+		tMock := &testMock{TestName: t.Name()}
 		env := newTestEnv(tMock)
 
 		callbackCalled := 0
@@ -355,7 +373,7 @@ func Test_FixtureWrapper(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		at := assert.New(t)
 
-		tMock := &testMock{name: "mock"}
+		tMock := &testMock{TestName: "mock"}
 		defer tMock.callCleanup()
 
 		e := newTestEnv(tMock)
@@ -393,11 +411,11 @@ func Test_FixtureWrapper(t *testing.T) {
 	t.Run("unknown_scope_info", func(t *testing.T) {
 		at := assert.New(t)
 
-		tMock := &testMock{name: "mock"}
+		tMock := &testMock{TestName: "mock"}
 		defer tMock.callCleanup()
 		e := newTestEnv(tMock)
 
-		tMock.name = "mock2"
+		tMock.TestName = "mock2"
 		w := e.fixtureCallWrapper("asd", func() (res interface{}, err error) {
 			return nil, nil
 		}, &FixtureOptions{})
@@ -406,14 +424,14 @@ func Test_FixtureWrapper(t *testing.T) {
 		})
 
 		// revert test name for good cleanup
-		tMock.name = "mock"
+		tMock.TestName = "mock"
 		at.Len(tMock.fatals, 1)
 	})
 }
 
 func Test_Env_Skip(t *testing.T) {
 	at := assert.New(t)
-	tm := &testMock{name: "mock"}
+	tm := &testMock{TestName: "mock"}
 	tEnv := newTestEnv(tm)
 
 	skipFixtureCallTimes := 0
@@ -488,12 +506,12 @@ func Test_Env_TearDown(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		at := assert.New(t)
 
-		t1 := &testMock{name: "mock"}
+		t1 := &testMock{TestName: "mock"}
 		// defer t1.callCleanup - direct call e1.tearDown - for test
 
 		e1 := newTestEnv(t1)
 		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[makeScopeName(t1.name, ScopeTest)].Keys(), 0)
+		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 0)
 		at.Len(e1.c.store, 0)
 
 		e1.Cache(1, nil, func() (res interface{}, err error) {
@@ -503,16 +521,16 @@ func Test_Env_TearDown(t *testing.T) {
 			return nil, nil
 		})
 		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[makeScopeName(t1.name, ScopeTest)].Keys(), 2)
+		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 2)
 		at.Len(e1.c.store, 2)
 
-		t2 := &testMock{name: "mock2"}
+		t2 := &testMock{TestName: "mock2"}
 		// defer t2.callCleanup - direct call e2.tearDown - for test
 
 		e2 := e1.cloneWithTest(t2)
 		at.Len(e1.scopes, 2)
-		at.Len(e1.scopes[makeScopeName(t1.name, ScopeTest)].Keys(), 2)
-		at.Len(e1.scopes[makeScopeName(t2.name, ScopeTest)].Keys(), 0)
+		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 2)
+		at.Len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys(), 0)
 		at.Len(e1.c.store, 2)
 
 		e2.Cache(1, nil, func() (res interface{}, err error) {
@@ -520,14 +538,14 @@ func Test_Env_TearDown(t *testing.T) {
 		})
 
 		at.Len(e1.scopes, 2)
-		at.Len(e1.scopes[makeScopeName(t1.name, ScopeTest)].Keys(), 2)
-		at.Len(e1.scopes[makeScopeName(t2.name, ScopeTest)].Keys(), 1)
+		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 2)
+		at.Len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys(), 1)
 		at.Len(e1.c.store, 3)
 
 		// finish first test and tearDown e1
 		e1.tearDown()
 		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[makeScopeName(t2.name, ScopeTest)].Keys(), 1)
+		at.Len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys(), 1)
 		at.Len(e1.c.store, 1)
 
 		e2.tearDown()
@@ -537,9 +555,9 @@ func Test_Env_TearDown(t *testing.T) {
 
 	t.Run("tearDown on unexisted scope", func(t *testing.T) {
 		at := assert.New(t)
-		tMock := &testMock{name: "mock"}
+		tMock := &testMock{TestName: "mock"}
 		// defer tMock.callCleanups. e.tearDown will call directly for test
-		e := NewEnv(tMock)
+		e := newTestEnv(tMock)
 
 		for key := range e.scopes {
 			delete(e.scopes, key)
