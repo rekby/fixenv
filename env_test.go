@@ -2,6 +2,7 @@ package fixenv
 
 import (
 	"errors"
+	"fmt"
 	"runtime"
 	"sync"
 	"testing"
@@ -16,8 +17,9 @@ type testMock struct {
 	m        sync.Mutex
 	cleanups []func()
 	fatals   []struct {
-		format string
-		args   []interface{}
+		format       string
+		args         []interface{}
+		resultString string
 	}
 	skipCount int
 }
@@ -52,10 +54,16 @@ func (t *testMock) Fatalf(format string, args ...interface{}) {
 	defer t.m.Unlock()
 
 	t.fatals = append(t.fatals, struct {
-		format string
-		args   []interface{}
-	}{format: format, args: args})
+		format       string
+		args         []interface{}
+		resultString string
+	}{
+		format:       format,
+		args:         args,
+		resultString: fmt.Sprintf(format, args...),
+	})
 
+	runtime.Goexit()
 }
 
 func (t *testMock) Name() string {
@@ -126,6 +134,11 @@ func Test_Env__NewEnv(t *testing.T) {
 	})
 }
 
+func testFailedFixture(env Env) {
+	env.Cache(nil, nil, func() (res interface{}, err error) {
+		return nil, errors.New("test error")
+	})
+}
 func Test_Env_Cache(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
 		at := assert.New(t)
@@ -211,12 +224,22 @@ func Test_Env_Cache(t *testing.T) {
 
 		e := NewEnv(tMock)
 		at.Len(tMock.fatals, 0)
-		at.Panics(func() {
-			e.Cache(nil, nil, func() (res interface{}, err error) {
-				return nil, errors.New("test")
-			})
-		})
-		at.Len(tMock.fatals, 1)
+
+		fatalChecked := make(chan bool)
+		go func() {
+			// t.Fatal, it will stop work goroutine
+			defer func() {
+				at.Len(tMock.fatals, 1)
+
+				// log message contains fixture name
+				at.Contains(tMock.fatals[0].resultString, "testFailedFixture")
+				close(fatalChecked)
+			}()
+
+			testFailedFixture(e)
+
+		}()
+		<-fatalChecked
 	})
 
 	t.Run("not_serializable_param", func(t *testing.T) {

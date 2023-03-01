@@ -101,6 +101,8 @@ func (e *EnvT) CacheWithCleanup(params interface{}, opt *FixtureOptions, f Fixtu
 	return e.cache(params, opt, fWithoutCleanup)
 }
 
+// cache must be call from first-level public function
+// UserFunction->EnvFunction->cache for good determine caller name
 func (e *EnvT) cache(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{} {
 	if opt == nil {
 		opt = globalEmptyFixtureOptions
