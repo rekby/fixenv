@@ -13,15 +13,16 @@ jobs:
     strategy:
       matrix:
         goVersion:
-          - "1.16"
-          - "1.17"
-          - "1.18"
+          - "1.16"      # oldest supported
+          - "1.18"      # first with generic
+          - "oldstable" # prev go version
+          - "stable"    # latest stable
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
 
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: ${{ matrix.goVersion }}
 
@@ -50,4 +51,3 @@ jobs:
       run: goveralls -coverprofile=covprofile.out -service=github
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
