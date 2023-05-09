@@ -41,7 +41,7 @@ func CreateMainTestEnv(opts *CreateMainTestEnvOpts) (env *EnvT, tearDown func())
 	packageLevelVirtualTest := newVirtualTest(opts)
 	globalMutex.Unlock()
 
-	env = NewEnv(packageLevelVirtualTest) // register global test for env
+	env = New(packageLevelVirtualTest) // register global test for env
 	return env, packageLevelVirtualTest.cleanup
 }
 

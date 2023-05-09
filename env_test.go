@@ -101,7 +101,7 @@ func Test_Env__NewEnv(t *testing.T) {
 		tMock := &testMock{TestName: "mock"}
 		defer tMock.callCleanup()
 
-		e := NewEnv(tMock)
+		e := New(tMock)
 		at.Equal(tMock, e.t)
 		at.Equal(globalCache, e.c)
 		at.Equal(&globalMutex, e.m)
@@ -123,21 +123,21 @@ func Test_Env__NewEnv(t *testing.T) {
 		tMock := &testMock{TestName: "mock"}
 		defer tMock.callCleanup()
 
-		_ = NewEnv(tMock)
+		_ = New(tMock)
 		at.Len(tMock.fatals, 0)
 
 		runUntilFatal(func() {
-			_ = NewEnv(tMock)
+			_ = New(tMock)
 		})
 		at.Len(tMock.fatals, 1)
 	})
 
 	t.Run("double_env_similar_scope_different_time", func(t *testing.T) {
 		t.Run("test", func(t *testing.T) {
-			_ = NewEnv(t)
+			_ = New(t)
 		})
 		t.Run("test", func(t *testing.T) {
-			_ = NewEnv(t)
+			_ = New(t)
 		})
 	})
 }
@@ -151,7 +151,7 @@ func testFailedFixture(env Env) {
 func Test_Env_Cache(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
 		at := assert.New(t)
-		e := NewEnv(t)
+		e := New(t)
 
 		val := 0
 		cntF := func() int {
@@ -171,7 +171,7 @@ func Test_Env_Cache(t *testing.T) {
 
 	t.Run("subtest_and_test_scope", func(t *testing.T) {
 		at := assert.New(t)
-		e := NewEnv(t)
+		e := New(t)
 
 		val := 0
 		cntF := func(env Env) int {
@@ -187,7 +187,7 @@ func Test_Env_Cache(t *testing.T) {
 
 		t.Run("subtest", func(t *testing.T) {
 			at := assert.New(t)
-			subEnv := NewEnv(t)
+			subEnv := New(t)
 			at.Equal(2, cntF(subEnv))
 			at.Equal(2, cntF(subEnv))
 		})
@@ -198,7 +198,7 @@ func Test_Env_Cache(t *testing.T) {
 
 	t.Run("subtest_and_package_scope", func(t *testing.T) {
 		at := assert.New(t)
-		e := NewEnv(t)
+		e := New(t)
 		_, mainClose := CreateMainTestEnv(nil)
 		defer mainClose()
 
@@ -216,7 +216,7 @@ func Test_Env_Cache(t *testing.T) {
 
 		t.Run("subtest", func(t *testing.T) {
 			at := assert.New(t)
-			subEnv := NewEnv(t)
+			subEnv := New(t)
 			at.Equal(1, cntF(subEnv))
 			at.Equal(1, cntF(subEnv))
 		})
@@ -308,7 +308,7 @@ func Test_Env_Cache(t *testing.T) {
 		at := assert.New(t)
 
 		tMock := &testMock{TestName: "mock", SkipGoexit: true}
-		e := NewEnv(tMock)
+		e := New(tMock)
 		at.Panics(func() {
 			e.Cache(nil, nil, func() (res interface{}, err error) {
 				return nil, ErrSkipTest
@@ -499,7 +499,7 @@ func Test_Env_Skip(t *testing.T) {
 
 func Test_Env_T(t *testing.T) {
 	at := assert.New(t)
-	e := NewEnv(t)
+	e := New(t)
 	at.Equal(t, e.T())
 }
 

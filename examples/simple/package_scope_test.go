@@ -36,14 +36,14 @@ func packageCounter(e fixenv.Env) int {
 }
 
 func TestPackageFirst(t *testing.T) {
-	e := fixenv.NewEnv(t)
+	e := fixenv.New(t)
 	if packageCounter(e) != 1 {
 		t.Error()
 	}
 }
 
 func TestPackageSecond(t *testing.T) {
-	e := fixenv.NewEnv(t)
+	e := fixenv.New(t)
 	if packageCounter(e) != 1 {
 		t.Error()
 	}

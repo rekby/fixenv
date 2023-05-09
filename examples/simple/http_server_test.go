@@ -32,7 +32,7 @@ func testServer(e fixenv.Env, response string) *httptest.Server {
 
 func TestHttpServer(t *testing.T) {
 	at := assert.New(t)
-	e := fixenv.NewEnv(t)
+	e := fixenv.New(t)
 
 	s1 := testServer(e, "OK")
 	resp, err := http.Get(s1.URL)
