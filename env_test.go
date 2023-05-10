@@ -17,7 +17,12 @@ type testMock struct {
 
 	m        sync.Mutex
 	cleanups []func()
-	fatals   []struct {
+	logs     []struct {
+		format       string
+		args         []interface{}
+		resultString string
+	}
+	fatals []struct {
 		format       string
 		args         []interface{}
 		resultString string
@@ -67,6 +72,17 @@ func (t *testMock) Fatalf(format string, args ...interface{}) {
 	if !t.SkipGoexit {
 		runtime.Goexit()
 	}
+}
+
+func (t *testMock) Logf(format string, args ...interface{}) {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	t.logs = append(t.logs, struct {
+		format       string
+		args         []interface{}
+		resultString string
+	}{format: format, args: args, resultString: fmt.Sprintf(format, args...)})
 }
 
 func (t *testMock) Name() string {
@@ -157,6 +173,7 @@ func Test_Env_Cache(t *testing.T) {
 		cntF := func() int {
 			res := e.Cache(nil, nil, func() (res interface{}, err error) {
 				val++
+				e.T().Logf("val: ", val)
 				return val, nil
 			})
 			return res.(int)
