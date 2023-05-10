@@ -45,11 +45,17 @@ type EnvT struct {
 	scopes map[string]*scopeInfo
 }
 
-// NewEnv create EnvT from test
-func NewEnv(t T) *EnvT {
+// New create EnvT from test
+func New(t T) *EnvT {
 	env := newEnv(t, globalCache, &globalMutex, globalScopeInfo)
 	env.onCreate()
 	return env
+}
+
+// NewEnv create EnvT from test
+// Deprecated: use New instead
+func NewEnv(t T) *EnvT {
+	return New(t)
 }
 
 func newEnv(t T, c *cache, m sync.Locker, scopes map[string]*scopeInfo) *EnvT {

@@ -21,7 +21,7 @@ type Env struct {
 
 func NewEnv(t *testing.T) *Env {
 	return &Env{
-		Env:  fixenv.NewEnv(t),
+		Env:  fixenv.New(t),
 		Resp: "OK",
 	}
 }

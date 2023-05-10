@@ -20,7 +20,7 @@ func namedRandom(e fixenv.Env, name string) int {
 }
 
 func TestNamedRandom(t *testing.T) {
-	e := fixenv.NewEnv(t)
+	e := fixenv.New(t)
 	first := namedRandom(e, "first")
 	second := namedRandom(e, "second")
 	require.NotEqual(t, first, second)

@@ -300,7 +300,7 @@ func TestCache_SetOnce(t *testing.T) {
 	})
 }
 
-func TestCache_GetOrSetRaceCondition(t *testing.T) {
+func TestCache_GetOrSetRaceCondition(_ *testing.T) {
 	parallels := 100
 	iterations := 1000
 

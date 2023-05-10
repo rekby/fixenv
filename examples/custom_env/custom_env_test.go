@@ -23,7 +23,7 @@ type Env struct {
 
 func NewEnv(t *testing.T) (context.Context, *Env) {
 	at := assert.New(t)
-	fEnv := fixenv.NewEnv(t)
+	fEnv := fixenv.New(t)
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	t.Cleanup(func() {
 		ctxCancel()

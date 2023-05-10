@@ -21,7 +21,7 @@ func counterOldStyle(e fixenv.Env) int {
 }
 
 func TestCounterOldStyle(t *testing.T) {
-	e := fixenv.NewEnv(t)
+	e := fixenv.New(t)
 
 	r1 := counterOldStyle(e)
 	r2 := counterOldStyle(e)
@@ -30,7 +30,7 @@ func TestCounterOldStyle(t *testing.T) {
 	}
 
 	t.Run("subtest", func(t *testing.T) {
-		e := fixenv.NewEnv(t)
+		e := fixenv.New(t)
 		r3 := counterOldStyle(e)
 		if r3 == r1 {
 			t.Error()
@@ -50,7 +50,7 @@ func counterTestAndSubtestOldStyle(e fixenv.Env) int {
 }
 
 func TestTestAndSubtestCounterOldStyle(t *testing.T) {
-	e := fixenv.NewEnv(t)
+	e := fixenv.New(t)
 
 	r1 := counterTestAndSubtestOldStyle(e)
 	r2 := counterTestAndSubtestOldStyle(e)
@@ -59,7 +59,7 @@ func TestTestAndSubtestCounterOldStyle(t *testing.T) {
 	}
 
 	t.Run("subtest", func(t *testing.T) {
-		e := fixenv.NewEnv(t)
+		e := fixenv.New(t)
 		r3 := counterTestAndSubtestOldStyle(e)
 		if r3 != r1 {
 			t.Error()

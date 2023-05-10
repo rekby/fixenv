@@ -19,7 +19,7 @@ func counter(e fixenv.Env) int {
 }
 
 func TestCounter(t *testing.T) {
-	e := fixenv.NewEnv(t)
+	e := fixenv.New(t)
 
 	r1 := counter(e)
 	r2 := counter(e)
@@ -28,7 +28,7 @@ func TestCounter(t *testing.T) {
 	}
 
 	t.Run("subtest", func(t *testing.T) {
-		e := fixenv.NewEnv(t)
+		e := fixenv.New(t)
 		r3 := counter(e)
 		if r3 == r1 {
 			t.Error()
@@ -48,7 +48,7 @@ func counterTestAndSubtest(e fixenv.Env) int {
 }
 
 func TestTestAndSubtestCounter(t *testing.T) {
-	e := fixenv.NewEnv(t)
+	e := fixenv.New(t)
 
 	r1 := counterTestAndSubtest(e)
 	r2 := counterTestAndSubtest(e)
@@ -57,7 +57,7 @@ func TestTestAndSubtestCounter(t *testing.T) {
 	}
 
 	t.Run("subtest", func(t *testing.T) {
-		e := fixenv.NewEnv(t)
+		e := fixenv.New(t)
 		r3 := counterTestAndSubtest(e)
 		if r3 != r1 {
 			t.Error()
