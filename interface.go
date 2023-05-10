@@ -95,6 +95,13 @@ type T interface {
 	// (which then runs all deferred calls in the current goroutine). Execution will continue at the next test or benchmark. FailNow must be called from the goroutine running the test or benchmark function, not from other goroutines created during the test. Calling FailNow does not stop those other goroutines.
 	Fatalf(format string, args ...interface{})
 
+	// Logf formats its arguments according to the format, analogous to Printf, and
+	// records the text in the error log. A final newline is added if not provided. For
+	// tests, the text will be printed only if the test fails or the -test.v flag is
+	// set. For benchmarks, the text is always printed to avoid having performance
+	// depend on the value of the -test.v flag.
+	Logf(format string, args ...interface{})
+
 	// Name returns the name of the running (sub-) test or benchmark.
 	//
 	// The name will include the name of the test along with the names

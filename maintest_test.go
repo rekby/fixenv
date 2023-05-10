@@ -12,6 +12,7 @@ func TestCreateMainTestEnv(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
 		at := assert.New(t)
 		e, cancel := CreateMainTestEnv(nil)
+		e.T().Logf("env created")
 		at.Equal(packageScopeName, e.t.Name())
 		at.NotNil(globalScopeInfo[packageScopeName])
 		cancel()

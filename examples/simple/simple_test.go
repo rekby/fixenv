@@ -14,6 +14,7 @@ import (
 func counter(e fixenv.Env) int {
 	return fixenv.Cache(e, nil, nil, func() (res int, err error) {
 		globalCounter++
+		e.T().Logf("increment globalCounter to: ")
 		return globalCounter, nil
 	})
 }
@@ -43,6 +44,7 @@ func counterTestAndSubtest(e fixenv.Env) int {
 		Scope: fixenv.ScopeTestAndSubtests,
 	}, func() (res int, err error) {
 		globalTestAndSubtestCounter++
+		e.T().Logf("increment globalTestAndSubtestCounter to: ")
 		return globalTestAndSubtestCounter, nil
 	})
 }

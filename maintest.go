@@ -2,6 +2,7 @@ package fixenv
 
 import (
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -88,6 +89,10 @@ func (t *virtualTest) Cleanup(f func()) {
 
 func (t *virtualTest) Fatalf(format string, args ...interface{}) {
 	t.fatalf(format, args...)
+}
+
+func (t *virtualTest) Logf(format string, args ...interface{}) {
+	log.Printf(format, args...)
 }
 
 func (t *virtualTest) Name() string {
