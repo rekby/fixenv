@@ -715,6 +715,17 @@ func Test_ScopeName(t *testing.T) {
 	})
 }
 
+func TestNewEnv(t *testing.T) {
+	tm := &testMock{}
+	tm.SkipGoexit = true
+	New(tm)
+
+	NewEnv(tm)
+	if len(tm.fatals) == 0 {
+		t.Fatal("bad double login between new and NewEnv")
+	}
+}
+
 func runUntilFatal(f func()) {
 	stopped := make(chan bool)
 	go func() {
