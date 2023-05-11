@@ -83,8 +83,8 @@ func (e *EnvT) T() T {
 // opt - fixture options, nil for default options.
 // f - callback - fixture body.
 // Cache guarantee for call f exactly once for same Cache called and params combination.
-func (e *EnvT) Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{} {
-	return e.cache(params, opt, f)
+func (e *EnvT) Cache(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{} {
+	return e.cache(cacheKey, opt, f)
 }
 
 // CacheWithCleanup call from fixture and manage call f and cache it.
@@ -99,7 +99,7 @@ func (e *EnvT) Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackF
 // f - callback - fixture body.
 // cleanup, returned from f called while fixture cleanup
 // Cache guarantee for call f exactly once for same Cache called and params combination.
-func (e *EnvT) CacheWithCleanup(params interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{} {
+func (e *EnvT) CacheWithCleanup(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{} {
 	if opt == nil {
 		opt = &FixtureOptions{}
 	}
@@ -116,16 +116,16 @@ func (e *EnvT) CacheWithCleanup(params interface{}, opt *FixtureOptions, f Fixtu
 		}
 	}
 
-	return e.cache(params, opt, fWithoutCleanup)
+	return e.cache(cacheKey, opt, fWithoutCleanup)
 }
 
 // cache must be call from first-level public function
 // UserFunction->EnvFunction->cache for good determine caller name
-func (e *EnvT) cache(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{} {
+func (e *EnvT) cache(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{} {
 	if opt == nil {
 		opt = globalEmptyFixtureOptions
 	}
-	key, err := makeCacheKey(e.t.Name(), params, opt, false)
+	key, err := makeCacheKey(e.t.Name(), cacheKey, opt, false)
 	if err != nil {
 		e.t.Fatalf("failed to create cache key: %v", err)
 		// return not reacheble after Fatalf
