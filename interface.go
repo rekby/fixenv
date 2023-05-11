@@ -10,12 +10,12 @@ type Env interface {
 	// Cache cache result of f calls
 	// f call exactly once for every combination of scope and params
 	// params must be json serializable (deserialize not need)
-	Cache(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
+	Cache(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
 
 	// CacheWithCleanup cache result of f calls
 	// f call exactly once for every combination of scope and params
 	// params must be json serializable (deserialize not need)
-	CacheWithCleanup(params interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{}
+	CacheWithCleanup(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{}
 }
 
 var (

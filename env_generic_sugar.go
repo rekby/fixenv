@@ -3,9 +3,9 @@
 
 package fixenv
 
-func Cache[TRes any](env Env, params any, opt *FixtureOptions, f func() (TRes, error)) TRes {
+func Cache[TRes any](env Env, cacheKey any, opt *FixtureOptions, f func() (TRes, error)) TRes {
 	addSkipLevel(&opt)
-	callbackResult := env.Cache(params, opt, func() (res interface{}, err error) {
+	callbackResult := env.Cache(cacheKey, opt, func() (res interface{}, err error) {
 		return f()
 	})
 
@@ -16,9 +16,9 @@ func Cache[TRes any](env Env, params any, opt *FixtureOptions, f func() (TRes, e
 	return res
 }
 
-func CacheWithCleanup[TRes any](env Env, params any, opt *FixtureOptions, f func() (TRes, FixtureCleanupFunc, error)) TRes {
+func CacheWithCleanup[TRes any](env Env, cacheKey any, opt *FixtureOptions, f func() (TRes, FixtureCleanupFunc, error)) TRes {
 	addSkipLevel(&opt)
-	callbackResult := env.CacheWithCleanup(params, opt, func() (res interface{}, cleanup FixtureCleanupFunc, err error) {
+	callbackResult := env.CacheWithCleanup(cacheKey, opt, func() (res interface{}, cleanup FixtureCleanupFunc, err error) {
 		return f()
 	})
 
