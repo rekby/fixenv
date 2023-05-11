@@ -2,7 +2,7 @@ package fixenv
 
 import (
 	"errors"
-	"fmt"
+	"github.com/rekby/fixenv/internal"
 	"runtime"
 	"sync"
 	"testing"
@@ -10,25 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type testMock struct {
-	TestName   string
-	SkipGoexit bool
-
-	m        sync.Mutex
-	cleanups []func()
-	logs     []struct {
-		format       string
-		args         []interface{}
-		resultString string
-	}
-	fatals []struct {
-		format       string
-		args         []interface{}
-		resultString string
-	}
-	skipCount int
-}
 
 func (e *EnvT) cloneWithTest(t T) *EnvT {
 	e2 := newEnv(t, e.c, e.m, e.scopes)
@@ -42,80 +23,13 @@ func newTestEnv(t T) *EnvT {
 	return e
 }
 
-func (t *testMock) callCleanup() {
-	for i := len(t.cleanups) - 1; i >= 0; i-- {
-		t.cleanups[i]()
-	}
-}
-
-func (t *testMock) Cleanup(f func()) {
-	t.m.Lock()
-	defer t.m.Unlock()
-
-	t.cleanups = append(t.cleanups, f)
-}
-
-func (t *testMock) Fatalf(format string, args ...interface{}) {
-	t.m.Lock()
-	defer t.m.Unlock()
-
-	t.fatals = append(t.fatals, struct {
-		format       string
-		args         []interface{}
-		resultString string
-	}{
-		format:       format,
-		args:         args,
-		resultString: fmt.Sprintf(format, args...),
-	})
-
-	if !t.SkipGoexit {
-		runtime.Goexit()
-	}
-}
-
-func (t *testMock) Logf(format string, args ...interface{}) {
-	t.m.Lock()
-	defer t.m.Unlock()
-
-	t.logs = append(t.logs, struct {
-		format       string
-		args         []interface{}
-		resultString string
-	}{format: format, args: args, resultString: fmt.Sprintf(format, args...)})
-}
-
-func (t *testMock) Name() string {
-	if t.TestName == "" {
-		return "mock"
-	}
-	return t.TestName
-}
-
-func (t *testMock) SkipNow() {
-	t.m.Lock()
-	t.skipCount++
-	t.m.Unlock()
-
-	if !t.SkipGoexit {
-		runtime.Goexit()
-	}
-}
-
-func (t *testMock) Skipped() bool {
-	t.m.Lock()
-	defer t.m.Unlock()
-
-	return t.skipCount > 0
-}
-
 func Test_Env__NewEnv(t *testing.T) {
 	t.Run("create_new_env", func(t *testing.T) {
 		initGlobalState()
 		at := assert.New(t)
 
-		tMock := &testMock{TestName: "mock"}
-		defer tMock.callCleanup()
+		tMock := &internal.TestMock{TestName: "mock"}
+		defer tMock.CallCleanup()
 
 		e := New(tMock)
 		at.Equal(tMock, e.t)
@@ -124,7 +38,7 @@ func Test_Env__NewEnv(t *testing.T) {
 		at.Equal(globalScopeInfo, e.scopes)
 		at.Len(globalCache.store, 0)
 		at.Len(globalScopeInfo, 1)
-		at.Len(tMock.cleanups, 1)
+		at.Len(tMock.Cleanups, 1)
 	})
 
 	t.Run("global_info_cleaned", func(t *testing.T) {
@@ -136,16 +50,16 @@ func Test_Env__NewEnv(t *testing.T) {
 	t.Run("double_env_same_scope_same_time", func(t *testing.T) {
 		at := assert.New(t)
 
-		tMock := &testMock{TestName: "mock"}
-		defer tMock.callCleanup()
+		tMock := &internal.TestMock{TestName: "mock"}
+		defer tMock.CallCleanup()
 
 		_ = New(tMock)
-		at.Len(tMock.fatals, 0)
+		at.Len(tMock.Fatals, 0)
 
 		runUntilFatal(func() {
 			_ = New(tMock)
 		})
-		at.Len(tMock.fatals, 1)
+		at.Len(tMock.Fatals, 1)
 	})
 
 	t.Run("double_env_similar_scope_different_time", func(t *testing.T) {
@@ -245,19 +159,19 @@ func Test_Env_Cache(t *testing.T) {
 	t.Run("fail_on_fixture_err", func(t *testing.T) {
 		at := assert.New(t)
 
-		tMock := &testMock{TestName: "mock"}
-		defer tMock.callCleanup()
+		tMock := &internal.TestMock{TestName: "mock"}
+		defer tMock.CallCleanup()
 
 		e := newTestEnv(tMock)
-		at.Len(tMock.fatals, 0)
+		at.Len(tMock.Fatals, 0)
 
 		runUntilFatal(func() {
 			testFailedFixture(e)
 		})
-		at.Len(tMock.fatals, 1)
+		at.Len(tMock.Fatals, 1)
 
 		// log message contains fixture name
-		at.Contains(tMock.fatals[0].resultString, "testFailedFixture")
+		at.Contains(tMock.Fatals[0].ResultString, "testFailedFixture")
 	})
 
 	t.Run("not_serializable_param", func(t *testing.T) {
@@ -267,20 +181,20 @@ func Test_Env_Cache(t *testing.T) {
 			F func() // can't serialize func to json
 		}
 		param := paramT{}
-		tMock := &testMock{TestName: "mock"}
-		defer tMock.callCleanup()
+		tMock := &internal.TestMock{TestName: "mock"}
+		defer tMock.CallCleanup()
 		e := newTestEnv(tMock)
 		runUntilFatal(func() {
 			e.Cache(param, nil, func() (res interface{}, err error) {
 				return nil, nil
 			})
 		})
-		at.Len(tMock.fatals, 1)
+		at.Len(tMock.Fatals, 1)
 	})
 
 	t.Run("cache_by_caller_func", func(t *testing.T) {
 		at := assert.New(t)
-		tMock := &testMock{TestName: "mock"}
+		tMock := &internal.TestMock{TestName: "mock"}
 		e := newTestEnv(tMock)
 
 		cnt := 0
@@ -299,7 +213,7 @@ func Test_Env_Cache(t *testing.T) {
 
 	t.Run("different_cache_for_diff_anonim_function", func(t *testing.T) {
 		at := assert.New(t)
-		tMock := &testMock{TestName: "mock"}
+		tMock := &internal.TestMock{TestName: "mock"}
 		e := newTestEnv(tMock)
 
 		cnt := 0
@@ -324,20 +238,20 @@ func Test_Env_Cache(t *testing.T) {
 	t.Run("check_unreachable_code", func(t *testing.T) {
 		at := assert.New(t)
 
-		tMock := &testMock{TestName: "mock", SkipGoexit: true}
+		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := New(tMock)
 		at.Panics(func() {
 			e.Cache(nil, nil, func() (res interface{}, err error) {
 				return nil, ErrSkipTest
 			})
 		})
-		at.Equal(1, tMock.skipCount)
+		at.Equal(1, tMock.SkipCount)
 	})
 }
 
 func Test_Env_CacheWithCleanup(t *testing.T) {
 	t.Run("NilCleanup", func(t *testing.T) {
-		tMock := &testMock{TestName: t.Name()}
+		tMock := &internal.TestMock{TestName: t.Name()}
 		env := newTestEnv(tMock)
 
 		callbackCalled := 0
@@ -357,7 +271,7 @@ func Test_Env_CacheWithCleanup(t *testing.T) {
 	})
 
 	t.Run("WithCleanup", func(t *testing.T) {
-		tMock := &testMock{TestName: t.Name()}
+		tMock := &internal.TestMock{TestName: t.Name()}
 		env := newTestEnv(tMock)
 
 		callbackCalled := 0
@@ -381,7 +295,7 @@ func Test_Env_CacheWithCleanup(t *testing.T) {
 		require.Equal(t, 1, callbackCalled)
 		require.Equal(t, cleanupCalled, 0)
 
-		tMock.callCleanup()
+		tMock.CallCleanup()
 		require.Equal(t, 1, callbackCalled)
 		require.Equal(t, 1, cleanupCalled)
 	})
@@ -391,8 +305,8 @@ func Test_FixtureWrapper(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		at := assert.New(t)
 
-		tMock := &testMock{TestName: "mock"}
-		defer tMock.callCleanup()
+		tMock := &internal.TestMock{TestName: "mock"}
+		defer tMock.CallCleanup()
 
 		e := newTestEnv(tMock)
 		key := cacheKey("asd")
@@ -413,24 +327,24 @@ func Test_FixtureWrapper(t *testing.T) {
 
 		cnt = 0
 		key2 := cacheKey("asd")
-		cleanupsLen := len(tMock.cleanups)
+		cleanupsLen := len(tMock.Cleanups)
 		w = e.fixtureCallWrapper(key2, func() (res interface{}, err error) {
 			cnt++
 			return cnt, nil
 		}, &FixtureOptions{cleanupFunc: func() {
 
 		}})
-		at.Len(tMock.cleanups, cleanupsLen)
+		at.Len(tMock.Cleanups, cleanupsLen)
 		_, _ = w()
 		at.Equal([]cacheKey{key, key2}, si.cacheKeys)
-		at.Len(tMock.cleanups, cleanupsLen+1)
+		at.Len(tMock.Cleanups, cleanupsLen+1)
 	})
 
 	t.Run("unknown_scope_info", func(t *testing.T) {
 		at := assert.New(t)
 
-		tMock := &testMock{TestName: "mock"}
-		defer tMock.callCleanup()
+		tMock := &internal.TestMock{TestName: "mock"}
+		defer tMock.CallCleanup()
 		e := newTestEnv(tMock)
 
 		tMock.TestName = "mock2"
@@ -443,13 +357,13 @@ func Test_FixtureWrapper(t *testing.T) {
 
 		// revert test name for good cleanup
 		tMock.TestName = "mock"
-		at.Len(tMock.fatals, 1)
+		at.Len(tMock.Fatals, 1)
 	})
 }
 
 func Test_Env_Skip(t *testing.T) {
 	at := assert.New(t)
-	tm := &testMock{TestName: "mock"}
+	tm := &internal.TestMock{TestName: "mock"}
 	tEnv := newTestEnv(tm)
 
 	skipFixtureCallTimes := 0
@@ -524,7 +438,7 @@ func Test_Env_TearDown(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		at := assert.New(t)
 
-		t1 := &testMock{TestName: "mock"}
+		t1 := &internal.TestMock{TestName: "mock"}
 		// defer t1.callCleanup - direct call e1.tearDown - for test
 
 		e1 := newTestEnv(t1)
@@ -542,7 +456,7 @@ func Test_Env_TearDown(t *testing.T) {
 		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 2)
 		at.Len(e1.c.store, 2)
 
-		t2 := &testMock{TestName: "mock2"}
+		t2 := &internal.TestMock{TestName: "mock2"}
 		// defer t2.callCleanup - direct call e2.tearDown - for test
 
 		e2 := e1.cloneWithTest(t2)
@@ -573,7 +487,7 @@ func Test_Env_TearDown(t *testing.T) {
 
 	t.Run("tearDown on unexisted scope", func(t *testing.T) {
 		at := assert.New(t)
-		tMock := &testMock{TestName: "mock"}
+		tMock := &internal.TestMock{TestName: "mock"}
 		// defer tMock.callCleanups. e.tearDown will call directly for test
 		e := newTestEnv(tMock)
 
@@ -583,7 +497,7 @@ func Test_Env_TearDown(t *testing.T) {
 
 		runUntilFatal(e.tearDown)
 
-		at.Len(tMock.fatals, 1)
+		at.Len(tMock.Fatals, 1)
 	})
 }
 
@@ -733,12 +647,13 @@ func Test_ScopeName(t *testing.T) {
 }
 
 func TestNewEnv(t *testing.T) {
-	tm := &testMock{}
+	tm := &internal.TestMock{}
 	tm.SkipGoexit = true
 	New(tm)
 
+	//goland:noinspection GoDeprecation
 	NewEnv(tm)
-	if len(tm.fatals) == 0 {
+	if len(tm.Fatals) == 0 {
 		t.Fatal("bad double login between new and NewEnv")
 	}
 }

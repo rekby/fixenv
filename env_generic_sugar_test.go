@@ -4,6 +4,7 @@
 package fixenv
 
 import (
+	"github.com/rekby/fixenv/internal"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,7 +29,7 @@ func TestCacheGeneric(t *testing.T) {
 		require.Equal(t, 2, res)
 	})
 	t.Run("SkipAdditionalCache", func(t *testing.T) {
-		test := &testMock{TestName: t.Name()}
+		test := &internal.TestMock{TestName: t.Name()}
 		env := newTestEnv(test)
 
 		f1 := func() int {
@@ -71,7 +72,7 @@ func TestCacheWithCleanupGeneric(t *testing.T) {
 		require.Equal(t, 2, res)
 	})
 	t.Run("SkipAdditionalCache", func(t *testing.T) {
-		test := &testMock{TestName: t.Name()}
+		test := &internal.TestMock{TestName: t.Name()}
 		env := newTestEnv(test)
 
 		f1 := func() int {
