@@ -29,9 +29,40 @@ func CacheWithCleanup[TRes any](env Env, cacheKey any, opt *FixtureOptions, f fu
 	return res
 }
 
+func CacheResult[TRes any](env Env, opts *CacheOptions, f GenericFixtureFunction[TRes]) TRes {
+	addSkipLevelCache(&opts)
+	var oldStyleFunc FixtureFunction = func() Result {
+		res := f()
+		return Result{
+			Result:  res.Result,
+			Error:   res.Error,
+			Cleanup: res.Cleanup,
+		}
+	}
+	res := env.CacheResult(opts, oldStyleFunc)
+	return res.(TRes)
+}
+
+// GenericFixtureFunction - callback function with structured result
+type GenericFixtureFunction[ResT any] func() GenericResult[ResT]
+
+// GenericResult of fixture callback
+type GenericResult[ResT any] struct {
+	Result  ResT
+	Error   error
+	Cleanup FixtureCleanupFunc
+}
+
 func addSkipLevel(optspp **FixtureOptions) {
 	if *optspp == nil {
 		*optspp = &FixtureOptions{}
+	}
+	(*optspp).additionlSkipExternalCalls++
+}
+
+func addSkipLevelCache(optspp **CacheOptions) {
+	if *optspp == nil {
+		*optspp = &CacheOptions{}
 	}
 	(*optspp).additionlSkipExternalCalls++
 }

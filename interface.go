@@ -7,6 +7,9 @@ type Env interface {
 	// T - return t object of current test/benchmark.
 	T() T
 
+	// CacheResult add
+	CacheResult(options *CacheOptions, f FixtureFunction) interface{}
+
 	// Cache cache result of f calls
 	// f call exactly once for every combination of scope and params
 	// params must be json serializable (deserialize not need)
@@ -77,6 +80,26 @@ type FixtureOptions struct {
 	// cleanupFunc if not nil - called for cleanup fixture results
 	// internal implementation details
 	cleanupFunc FixtureCleanupFunc
+}
+
+// FixtureFunction - callback function with structured result
+type FixtureFunction func() Result
+
+// Result of fixture callback
+type Result struct {
+	Result  interface{}
+	Error   error
+	Cleanup FixtureCleanupFunc
+}
+
+type CacheOptions struct {
+	// Scope for cache result
+	Scope CacheScope
+
+	// Key for cache results, must be json serializable value
+	CacheKey interface{}
+
+	additionlSkipExternalCalls int
 }
 
 // T is subtype of testing.TB

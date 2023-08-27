@@ -119,6 +119,32 @@ func (e *EnvT) CacheWithCleanup(cacheKey interface{}, opt *FixtureOptions, f Fix
 	return e.cache(cacheKey, opt, fWithoutCleanup)
 }
 
+func (e *EnvT) CacheResult(options *CacheOptions, f FixtureFunction) interface{} {
+	if options == nil {
+		options = &CacheOptions{}
+	}
+
+	var resCleanupFunc FixtureCleanupFunc
+
+	var fWithoutCleanup FixtureCallbackFunc = func() (res interface{}, err error) {
+		result := f()
+		resCleanupFunc = result.Cleanup
+		return result.Result, result.Error
+	}
+
+	opt := &FixtureOptions{}
+	opt.Scope = options.Scope
+
+	opt.cleanupFunc = func() {
+		if resCleanupFunc != nil {
+			resCleanupFunc()
+		}
+	}
+
+	return e.cache(options.CacheKey, opt, fWithoutCleanup)
+
+}
+
 // cache must be call from first-level public function
 // UserFunction->EnvFunction->cache for good determine caller name
 func (e *EnvT) cache(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{} {
