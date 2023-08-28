@@ -6,8 +6,12 @@ import (
 )
 
 func Context(e fixenv.Env) context.Context {
-	return e.CacheWithCleanup(nil, nil, func() (res interface{}, _ fixenv.FixtureCleanupFunc, _ error) {
+	return e.CacheResult(nil, func() fixenv.Result {
 		ctx, ctxCancel := context.WithCancel(context.Background())
-		return ctx, fixenv.FixtureCleanupFunc(ctxCancel), nil
+		return fixenv.Result{
+			Result:  ctx,
+			Error:   nil,
+			Cleanup: fixenv.FixtureCleanupFunc(ctxCancel),
+		}
 	}).(context.Context)
 }

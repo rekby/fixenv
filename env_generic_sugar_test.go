@@ -89,12 +89,58 @@ func TestCacheWithCleanupGeneric(t *testing.T) {
 		require.Equal(t, 1, f1())
 		require.Equal(t, 2, f2())
 	})
+}
+func TestCacheResultGeneric(t *testing.T) {
+	t.Run("PassParams", func(t *testing.T) {
+		inOpt := &CacheOptions{
+			CacheKey: 123,
+			Scope:    ScopeTest,
+		}
 
+		cleanupCalledBack := 0
+
+		env := envMock{onCacheResult: func(opt *CacheOptions, f FixtureFunction) interface{} {
+			opt.additionlSkipExternalCalls--
+			require.Equal(t, inOpt, opt)
+			res := f()
+			return res.Result
+		}}
+
+		res := CacheResult(env, inOpt, func() GenericResult[int] {
+			cleanup := func() {
+				cleanupCalledBack++
+			}
+			return GenericResult[int]{
+				Result:  2,
+				Cleanup: cleanup,
+			}
+		})
+		require.Equal(t, 2, res)
+	})
+	t.Run("SkipAdditionalCache", func(t *testing.T) {
+		test := &internal.TestMock{TestName: t.Name()}
+		env := newTestEnv(test)
+
+		f1 := func() int {
+			return CacheResult(env, nil, func() GenericResult[int] {
+				return GenericResult[int]{Result: 1}
+			})
+		}
+		f2 := func() int {
+			return CacheResult(env, nil, func() GenericResult[int] {
+				return GenericResult[int]{Result: 2}
+			})
+		}
+
+		require.Equal(t, 1, f1())
+		require.Equal(t, 2, f2())
+	})
 }
 
 type envMock struct {
 	onCache            func(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
 	onCacheWithCleanup func(params interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{}
+	onCacheResult      func(opts *CacheOptions, f FixtureFunction) interface{}
 }
 
 func (e envMock) T() T {
@@ -107,4 +153,8 @@ func (e envMock) Cache(params interface{}, opt *FixtureOptions, f FixtureCallbac
 
 func (e envMock) CacheWithCleanup(params interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{} {
 	return e.onCacheWithCleanup(params, opt, f)
+}
+
+func (e envMock) CacheResult(opts *CacheOptions, f FixtureFunction) interface{} {
+	return e.onCacheResult(opts, f)
 }

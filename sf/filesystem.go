@@ -8,7 +8,7 @@ import (
 // TempDir return path for existet temporary folder
 // the folder will remove after test finish with all contents
 func TempDir(e fixenv.Env) string {
-	return e.CacheWithCleanup(nil, nil, func() (res interface{}, cleanup fixenv.FixtureCleanupFunc, err error) {
+	return e.CacheResult(nil, func() fixenv.Result {
 		dir, err := os.MkdirTemp("", "fixenv-auto-")
 		mustNoErr(e, err, "failed to create temp dir: %v", err)
 		e.T().Logf("Temp dir created: %v", dir)
@@ -16,7 +16,11 @@ func TempDir(e fixenv.Env) string {
 			_ = os.RemoveAll(dir)
 			e.T().Logf("Temp dir removed: %v", dir)
 		}
-		return dir, clean, nil
+		return fixenv.Result{
+			Result:  dir,
+			Error:   nil,
+			Cleanup: clean,
+		}
 	}).(string)
 }
 
@@ -28,11 +32,15 @@ func TempFile(e fixenv.Env) string {
 // TempFileNamed return path to empty file in TempDir
 // pattern is pattern for os.CreateTemp
 func TempFileNamed(e fixenv.Env, pattern string) string {
-	return e.Cache(nil, nil, func() (res interface{}, err error) {
+	return e.CacheResult(nil, func() fixenv.Result {
 		dir := TempDir(e)
 		f, err := os.CreateTemp(dir, pattern)
 		mustNoErr(e, err, "failed to create temp file: %w", err)
 		fName := f.Name()
-		return fName, f.Close()
+		err = f.Close()
+		mustNoErr(e, err, "failed to close temp file during initialize: %w", err)
+		return fixenv.Result{
+			Result: fName,
+		}
 	}).(string)
 }

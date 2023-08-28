@@ -6,8 +6,11 @@ import (
 )
 
 func HTTPServer(e fixenv.Env) *httptest.Server {
-	return e.CacheWithCleanup(nil, nil, func() (res interface{}, cleanup fixenv.FixtureCleanupFunc, err error) {
+	return e.CacheResult(nil, func() fixenv.Result {
 		server := httptest.NewServer(nil)
-		return server, server.Close, nil
+		return fixenv.Result{
+			Result:  server,
+			Cleanup: server.Close,
+		}
 	}).(*httptest.Server)
 }

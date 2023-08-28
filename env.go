@@ -134,6 +134,7 @@ func (e *EnvT) CacheResult(options *CacheOptions, f FixtureFunction) interface{}
 
 	opt := &FixtureOptions{}
 	opt.Scope = options.Scope
+	opt.additionlSkipExternalCalls = options.additionlSkipExternalCalls
 
 	opt.cleanupFunc = func() {
 		if resCleanupFunc != nil {
