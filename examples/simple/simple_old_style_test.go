@@ -14,9 +14,9 @@ var (
 // counterOldStyle fixture - increment globalCounter every non cached call
 // and return new globalCounter value
 func counterOldStyle(e fixenv.Env) int {
-	return e.Cache(nil, nil, func() (res interface{}, err error) {
+	return e.CacheResult(nil, func() fixenv.Result {
 		globalCounter++
-		return globalCounter, nil
+		return fixenv.Result{Result: globalCounter}
 	}).(int)
 }
 

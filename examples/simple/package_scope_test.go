@@ -29,9 +29,11 @@ func TestMain(m *testing.M) {
 
 // packageCounter fixture will call without cache once only
 func packageCounter(e fixenv.Env) int {
-	return fixenv.Cache(e, "", &fixenv.FixtureOptions{Scope: fixenv.ScopePackage}, func() (res int, err error) {
+	return fixenv.CacheResult(e, &fixenv.CacheOptions{Scope: fixenv.ScopePackage}, func() fixenv.GenericResult[int] {
 		packageCounterVal++
-		return packageCounterVal, nil
+		return fixenv.GenericResult[int]{
+			Result: packageCounterVal,
+		}
 	})
 }
 
