@@ -16,7 +16,7 @@ var (
 func counterOldStyle(e fixenv.Env) int {
 	f := func() (*fixenv.Result, error) {
 		globalCounter++
-		return fixenv.NewResult(globalCounter)
+		return fixenv.NewResult(globalCounter), nil
 	}
 	return e.CacheResult(f).(int)
 }

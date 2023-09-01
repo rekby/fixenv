@@ -15,7 +15,7 @@ func FreeLocalTCPAddressNamed(e fixenv.Env, name string) string {
 		addr := listener.Addr().String()
 		err := listener.Close()
 		mustNoErr(e, err, "failed to close temp listener: %v", err)
-		return fixenv.NewResult(addr)
+		return fixenv.NewResult(addr), nil
 	}
 	return e.CacheResult(f, fixenv.CacheOptions{CacheKey: name}).(string)
 }

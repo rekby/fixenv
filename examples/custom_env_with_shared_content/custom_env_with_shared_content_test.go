@@ -36,7 +36,7 @@ func testServer(e *Env) *httptest.Server {
 			server.Close()
 			e.T().(testing.TB).Logf("Http server stop, url: %q", server.URL)
 		}
-		return fixenv.NewGenericResultWithCleanup(server, cleanup)
+		return fixenv.NewGenericResultWithCleanup(server, cleanup), nil
 	}
 
 	return fixenv.CacheResult(e, f)

@@ -111,7 +111,7 @@ func TestCacheResultGeneric(t *testing.T) {
 			cleanup := func() {
 				cleanupCalledBack++
 			}
-			return NewGenericResultWithCleanup(2, cleanup)
+			return NewGenericResultWithCleanup(2, cleanup), nil
 		}
 		res := CacheResult(env, f, inOpt)
 		require.Equal(t, 2, res)
@@ -122,12 +122,12 @@ func TestCacheResultGeneric(t *testing.T) {
 
 		f1 := func() int {
 			return CacheResult(env, func() (*GenericResult[int], error) {
-				return NewGenericResult(1)
+				return NewGenericResult(1), nil
 			})
 		}
 		f2 := func() int {
 			return CacheResult(env, func() (*GenericResult[int], error) {
-				return NewGenericResult(2)
+				return NewGenericResult(2), nil
 			})
 		}
 

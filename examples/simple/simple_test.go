@@ -15,7 +15,7 @@ func counter(e fixenv.Env) int {
 	f := func() (*fixenv.GenericResult[int], error) {
 		globalCounter++
 		e.T().Logf("increment globalCounter to: ")
-		return fixenv.NewGenericResult(globalCounter)
+		return fixenv.NewGenericResult(globalCounter), nil
 	}
 
 	return fixenv.CacheResult(e, f)

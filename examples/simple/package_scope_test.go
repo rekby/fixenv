@@ -31,7 +31,7 @@ func TestMain(m *testing.M) {
 func packageCounter(e fixenv.Env) int {
 	f := func() (*fixenv.GenericResult[int], error) {
 		packageCounterVal++
-		return fixenv.NewGenericResult(packageCounterVal)
+		return fixenv.NewGenericResult(packageCounterVal), nil
 	}
 	return fixenv.CacheResult(e, f, fixenv.CacheOptions{Scope: fixenv.ScopePackage})
 }

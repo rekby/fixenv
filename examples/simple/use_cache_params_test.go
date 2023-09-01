@@ -15,7 +15,7 @@ import (
 // but return same value for all calls with same names
 func namedRandom(e fixenv.Env, name string) int {
 	f := func() (*fixenv.GenericResult[int], error) {
-		return fixenv.NewGenericResult(rand.Int())
+		return fixenv.NewGenericResult(rand.Int()), nil
 	}
 
 	return fixenv.CacheResult(e, f, fixenv.CacheOptions{CacheKey: name})

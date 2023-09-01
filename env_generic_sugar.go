@@ -5,6 +5,8 @@ package fixenv
 
 import "fmt"
 
+// Cache is call f once per cache scope (default per test) and cache result (success or error).
+// All other calls of the f will return same result
 func Cache[TRes any](env Env, cacheKey any, opt *FixtureOptions, f func() (TRes, error)) TRes {
 	addSkipLevel(&opt)
 	callbackResult := env.Cache(cacheKey, opt, func() (res interface{}, err error) {
@@ -18,6 +20,9 @@ func Cache[TRes any](env Env, cacheKey any, opt *FixtureOptions, f func() (TRes,
 	return res
 }
 
+// CacheWithCleanup is call f once per cache scope (default per test) and cache result (success or error).
+// All other calls of the f will return same result.
+// Used when fixture need own cleanup after exit from test scope
 func CacheWithCleanup[TRes any](env Env, cacheKey any, opt *FixtureOptions, f func() (TRes, FixtureCleanupFunc, error)) TRes {
 	addSkipLevel(&opt)
 	callbackResult := env.CacheWithCleanup(cacheKey, opt, func() (res interface{}, cleanup FixtureCleanupFunc, err error) {
@@ -31,6 +36,8 @@ func CacheWithCleanup[TRes any](env Env, cacheKey any, opt *FixtureOptions, f fu
 	return res
 }
 
+// CacheResult is call f once per cache scope (default per test) and cache result (success or error).
+// All other calls of the f will return same result.
 func CacheResult[TRes any](env Env, f GenericFixtureFunction[TRes], options ...CacheOptions) TRes {
 	var cacheOptions CacheOptions
 	switch len(options) {
@@ -68,12 +75,14 @@ type GenericResult[ResT any] struct {
 	ResultAdditional
 }
 
-func NewGenericResult[ResT any](res ResT) (*GenericResult[ResT], error) {
-	return &GenericResult[ResT]{Value: res}, nil
+// NewGenericResult return result struct and nil error.
+// Use it for smaller boilerplate for define generic specifications
+func NewGenericResult[ResT any](res ResT) *GenericResult[ResT] {
+	return &GenericResult[ResT]{Value: res}
 }
 
-func NewGenericResultWithCleanup[ResT any](res ResT, cleanup FixtureCleanupFunc) (*GenericResult[ResT], error) {
-	return &GenericResult[ResT]{Value: res, ResultAdditional: ResultAdditional{Cleanup: cleanup}}, nil
+func NewGenericResultWithCleanup[ResT any](res ResT, cleanup FixtureCleanupFunc) *GenericResult[ResT] {
+	return &GenericResult[ResT]{Value: res, ResultAdditional: ResultAdditional{Cleanup: cleanup}}
 }
 
 func addSkipLevel(optspp **FixtureOptions) {

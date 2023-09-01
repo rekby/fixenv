@@ -26,7 +26,7 @@ func testServer(e fixenv.Env, response string) *httptest.Server {
 			server.Close()
 			e.T().(testing.TB).Logf("Http server stop. %q url: %q", response, server.URL)
 		}
-		return fixenv.NewResultWithCleanup(server, cleanup)
+		return fixenv.NewResultWithCleanup(server, cleanup), nil
 	}
 
 	return e.CacheResult(f, fixenv.CacheOptions{CacheKey: response}).(*httptest.Server)

@@ -16,7 +16,7 @@ func TempDir(e fixenv.Env) string {
 			_ = os.RemoveAll(dir)
 			e.T().Logf("Temp dir removed: %v", dir)
 		}
-		return fixenv.NewResultWithCleanup(dir, clean)
+		return fixenv.NewResultWithCleanup(dir, clean), nil
 	}
 	return e.CacheResult(f).(string)
 }
@@ -36,7 +36,7 @@ func TempFileNamed(e fixenv.Env, pattern string) string {
 		fName := f.Name()
 		err = f.Close()
 		mustNoErr(e, err, "failed to close temp file during initialize: %w", err)
-		return fixenv.NewResult(fName)
+		return fixenv.NewResult(fName), nil
 	}
 
 	return e.CacheResult(f).(string)

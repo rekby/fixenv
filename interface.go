@@ -96,12 +96,12 @@ type ResultAdditional struct {
 	Cleanup FixtureCleanupFunc
 }
 
-func NewResult(res interface{}) (*Result, error) {
-	return &Result{Value: res}, nil
+func NewResult(res interface{}) *Result {
+	return &Result{Value: res}
 }
 
-func NewResultWithCleanup(res interface{}, cleanup FixtureCleanupFunc) (*Result, error) {
-	return &Result{Value: res, ResultAdditional: ResultAdditional{Cleanup: cleanup}}, nil
+func NewResultWithCleanup(res interface{}, cleanup FixtureCleanupFunc) *Result {
+	return &Result{Value: res, ResultAdditional: ResultAdditional{Cleanup: cleanup}}
 }
 
 type CacheOptions struct {
