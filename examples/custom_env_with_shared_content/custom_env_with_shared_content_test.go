@@ -27,7 +27,7 @@ func NewEnv(t *testing.T) *Env {
 }
 
 func testServer(e *Env) *httptest.Server {
-	return fixenv.CacheResult(e, nil, func() fixenv.GenericResult[*httptest.Server] {
+	f := func() (*fixenv.GenericResult[*httptest.Server], error) {
 		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			_, _ = writer.Write([]byte(e.Resp))
 		}))
@@ -36,8 +36,10 @@ func testServer(e *Env) *httptest.Server {
 			server.Close()
 			e.T().(testing.TB).Logf("Http server stop, url: %q", server.URL)
 		}
-		return fixenv.GenericResult[*httptest.Server]{Result: server, Cleanup: cleanup}
-	})
+		return fixenv.NewGenericResultWithCleanup(server, cleanup)
+	}
+
+	return fixenv.CacheResult(e, f)
 }
 
 func TestHttpServer(t *testing.T) {

@@ -10,13 +10,14 @@ func FreeLocalTCPAddress(e fixenv.Env) string {
 }
 
 func FreeLocalTCPAddressNamed(e fixenv.Env, name string) string {
-	return e.CacheResult(&fixenv.CacheOptions{CacheKey: name}, func() fixenv.Result {
+	f := func() (*fixenv.Result, error) {
 		listener := LocalTCPListenerNamed(e, "FreeLocalTCPAddressNamed-"+name)
 		addr := listener.Addr().String()
 		err := listener.Close()
 		mustNoErr(e, err, "failed to close temp listener: %v", err)
-		return fixenv.Result{Result: addr}
-	}).(string)
+		return fixenv.NewResult(addr)
+	}
+	return e.CacheResult(f, fixenv.CacheOptions{CacheKey: name}).(string)
 }
 
 func LocalTCPListener(e fixenv.Env) *net.TCPListener {

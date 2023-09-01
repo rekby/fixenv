@@ -4,6 +4,7 @@
 package fixenv
 
 import (
+	"fmt"
 	"github.com/rekby/fixenv/internal"
 	"testing"
 
@@ -92,29 +93,27 @@ func TestCacheWithCleanupGeneric(t *testing.T) {
 }
 func TestCacheResultGeneric(t *testing.T) {
 	t.Run("PassParams", func(t *testing.T) {
-		inOpt := &CacheOptions{
+		inOpt := CacheOptions{
 			CacheKey: 123,
 			Scope:    ScopeTest,
 		}
 
 		cleanupCalledBack := 0
 
-		env := envMock{onCacheResult: func(opt *CacheOptions, f FixtureFunction) interface{} {
+		env := envMock{onCacheResult: func(opt CacheOptions, f FixtureFunction) interface{} {
 			opt.additionlSkipExternalCalls--
 			require.Equal(t, inOpt, opt)
-			res := f()
-			return res.Result
+			res, _ := f()
+			return res.Value
 		}}
 
-		res := CacheResult(env, inOpt, func() GenericResult[int] {
+		f := func() (*GenericResult[int], error) {
 			cleanup := func() {
 				cleanupCalledBack++
 			}
-			return GenericResult[int]{
-				Result:  2,
-				Cleanup: cleanup,
-			}
-		})
+			return NewGenericResultWithCleanup(2, cleanup)
+		}
+		res := CacheResult(env, f, inOpt)
 		require.Equal(t, 2, res)
 	})
 	t.Run("SkipAdditionalCache", func(t *testing.T) {
@@ -122,13 +121,13 @@ func TestCacheResultGeneric(t *testing.T) {
 		env := newTestEnv(test)
 
 		f1 := func() int {
-			return CacheResult(env, nil, func() GenericResult[int] {
-				return GenericResult[int]{Result: 1}
+			return CacheResult(env, func() (*GenericResult[int], error) {
+				return NewGenericResult(1)
 			})
 		}
 		f2 := func() int {
-			return CacheResult(env, nil, func() GenericResult[int] {
-				return GenericResult[int]{Result: 2}
+			return CacheResult(env, func() (*GenericResult[int], error) {
+				return NewGenericResult(2)
 			})
 		}
 
@@ -140,7 +139,7 @@ func TestCacheResultGeneric(t *testing.T) {
 type envMock struct {
 	onCache            func(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
 	onCacheWithCleanup func(params interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{}
-	onCacheResult      func(opts *CacheOptions, f FixtureFunction) interface{}
+	onCacheResult      func(opts CacheOptions, f FixtureFunction) interface{}
 }
 
 func (e envMock) T() T {
@@ -155,6 +154,15 @@ func (e envMock) CacheWithCleanup(params interface{}, opt *FixtureOptions, f Fix
 	return e.onCacheWithCleanup(params, opt, f)
 }
 
-func (e envMock) CacheResult(opts *CacheOptions, f FixtureFunction) interface{} {
+func (e envMock) CacheResult(f FixtureFunction, options ...CacheOptions) interface{} {
+	var opts CacheOptions
+	switch len(options) {
+	case 0:
+		// pass
+	case 1:
+		opts = options[0]
+	default:
+		panic(fmt.Errorf("max options len is 1, given: %v", len(options)))
+	}
 	return e.onCacheResult(opts, f)
 }

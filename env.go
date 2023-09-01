@@ -119,22 +119,28 @@ func (e *EnvT) CacheWithCleanup(cacheKey interface{}, opt *FixtureOptions, f Fix
 	return e.cache(cacheKey, opt, fWithoutCleanup)
 }
 
-func (e *EnvT) CacheResult(options *CacheOptions, f FixtureFunction) interface{} {
-	if options == nil {
-		options = &CacheOptions{}
+func (e *EnvT) CacheResult(f FixtureFunction, options ...CacheOptions) interface{} {
+	var cacheOptions CacheOptions
+	switch len(options) {
+	case 0:
+		cacheOptions = CacheOptions{}
+	case 1:
+		cacheOptions = options[0]
+	default:
+		panic(fmt.Errorf("max len of cache result cacheOptions is 1, given: %v", len(options)))
 	}
 
 	var resCleanupFunc FixtureCleanupFunc
 
 	var fWithoutCleanup FixtureCallbackFunc = func() (res interface{}, err error) {
-		result := f()
+		result, err := f()
 		resCleanupFunc = result.Cleanup
-		return result.Result, result.Error
+		return result.Value, err
 	}
 
 	opt := &FixtureOptions{}
-	opt.Scope = options.Scope
-	opt.additionlSkipExternalCalls = options.additionlSkipExternalCalls
+	opt.Scope = cacheOptions.Scope
+	opt.additionlSkipExternalCalls = cacheOptions.additionlSkipExternalCalls
 
 	opt.cleanupFunc = func() {
 		if resCleanupFunc != nil {
@@ -142,7 +148,7 @@ func (e *EnvT) CacheResult(options *CacheOptions, f FixtureFunction) interface{}
 		}
 	}
 
-	return e.cache(options.CacheKey, opt, fWithoutCleanup)
+	return e.cache(cacheOptions.CacheKey, opt, fWithoutCleanup)
 
 }
 
