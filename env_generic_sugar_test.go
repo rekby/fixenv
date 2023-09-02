@@ -6,6 +6,8 @@ package fixenv
 import (
 	"fmt"
 	"github.com/rekby/fixenv/internal"
+	"github.com/stretchr/testify/assert"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -91,6 +93,7 @@ func TestCacheWithCleanupGeneric(t *testing.T) {
 		require.Equal(t, 2, f2())
 	})
 }
+
 func TestCacheResultGeneric(t *testing.T) {
 	t.Run("PassParams", func(t *testing.T) {
 		inOpt := CacheOptions{
@@ -133,6 +136,57 @@ func TestCacheResultGeneric(t *testing.T) {
 
 		require.Equal(t, 1, f1())
 		require.Equal(t, 2, f2())
+	})
+}
+
+func TestCacheResultPanic(t *testing.T) {
+	t.Run("Simple", func(t *testing.T) {
+		at := assert.New(t)
+		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
+		e := New(tMock)
+
+		rndFix := func(e Env) int {
+			return CacheResult(e, func() (*GenericResult[int], error) {
+				return NewGenericResult(rand.Int()), nil
+			})
+		}
+		first := rndFix(e)
+		second := rndFix(e)
+
+		at.Equal(first, second)
+	})
+	t.Run("Options", func(t *testing.T) {
+		at := assert.New(t)
+		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
+		e := New(tMock)
+
+		rndFix := func(e Env, name string) int {
+			return CacheResult(e, func() (*GenericResult[int], error) {
+				return NewGenericResult(rand.Int()), nil
+			}, CacheOptions{CacheKey: name})
+		}
+		first1 := rndFix(e, "first")
+		first2 := rndFix(e, "first")
+		second1 := rndFix(e, "second")
+		second2 := rndFix(e, "second")
+
+		at.Equal(first1, first2)
+		at.Equal(second1, second2)
+		at.NotEqual(first1, second1)
+	})
+	t.Run("Panic", func(t *testing.T) {
+		at := assert.New(t)
+		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
+		e := New(tMock)
+
+		rndFix := func(e Env, name string) int {
+			return CacheResult(e, func() (*GenericResult[int], error) {
+				return NewGenericResult(rand.Int()), nil
+			}, CacheOptions{CacheKey: name}, CacheOptions{CacheKey: name})
+		}
+		at.Panics(func() {
+			rndFix(e, "first")
+		})
 	})
 }
 

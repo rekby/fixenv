@@ -3,6 +3,7 @@ package fixenv
 import (
 	"errors"
 	"github.com/rekby/fixenv/internal"
+	"math/rand"
 	"runtime"
 	"sync"
 	"testing"
@@ -298,6 +299,57 @@ func Test_Env_CacheWithCleanup(t *testing.T) {
 		tMock.CallCleanup()
 		require.Equal(t, 1, callbackCalled)
 		require.Equal(t, 1, cleanupCalled)
+	})
+}
+
+func Test_Env_CacheResult(t *testing.T) {
+	t.Run("Simple", func(t *testing.T) {
+		at := assert.New(t)
+		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
+		e := New(tMock)
+
+		rndFix := func(e Env) int {
+			return e.CacheResult(func() (*Result, error) {
+				return NewResult(rand.Int()), nil
+			}).(int)
+		}
+		first := rndFix(e)
+		second := rndFix(e)
+
+		at.Equal(first, second)
+	})
+	t.Run("Options", func(t *testing.T) {
+		at := assert.New(t)
+		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
+		e := New(tMock)
+
+		rndFix := func(e Env, name string) int {
+			return e.CacheResult(func() (*Result, error) {
+				return NewResult(rand.Int()), nil
+			}, CacheOptions{CacheKey: name}).(int)
+		}
+		first1 := rndFix(e, "first")
+		first2 := rndFix(e, "first")
+		second1 := rndFix(e, "second")
+		second2 := rndFix(e, "second")
+
+		at.Equal(first1, first2)
+		at.Equal(second1, second2)
+		at.NotEqual(first1, second1)
+	})
+	t.Run("Panic", func(t *testing.T) {
+		at := assert.New(t)
+		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
+		e := New(tMock)
+
+		rndFix := func(e Env, name string) int {
+			return e.CacheResult(func() (*Result, error) {
+				return NewResult(rand.Int()), nil
+			}, CacheOptions{CacheKey: name}, CacheOptions{CacheKey: name}).(int)
+		}
+		at.Panics(func() {
+			rndFix(e, "first")
+		})
 	})
 }
 
@@ -651,7 +703,6 @@ func TestNewEnv(t *testing.T) {
 	tm.SkipGoexit = true
 	New(tm)
 
-	//goland:noinspection GoDeprecation
 	NewEnv(tm)
 	if len(tm.Fatals) == 0 {
 		t.Fatal("bad double login between new and NewEnv")
