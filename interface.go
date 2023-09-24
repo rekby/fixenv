@@ -3,6 +3,12 @@ package fixenv
 import "errors"
 
 // Env - fixture cache engine.
+// Env interface described TEnv method and need for easy reuse different Envs with
+// same fixtures.
+//
+// The interface can be extended.
+// Create own Envs with embed TEnv or the interface for auto-implement all methods
+// in the future.
 type Env interface {
 	// T - return t object of current test/benchmark.
 	T() T
