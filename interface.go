@@ -14,13 +14,15 @@ type Env interface {
 	// Cache result of f calls
 	// f call exactly once for every combination of scope and params
 	// params must be json serializable (deserialize not need)
-	// Deprecated: Use CacheResult
+	// Deprecated: will be removed in next versions
+	// Use Env.CacheResult instead.
 	Cache(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
 
 	// CacheWithCleanup cache result of f calls
 	// f call exactly once for every combination of scope and params
 	// params must be json serializable (deserialize not need)
-	// Deprecated: Use CacheResult
+	// Deprecated: will be removed in next versions
+	// Use Env.CacheResult instead.
 	CacheWithCleanup(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{}
 }
 
