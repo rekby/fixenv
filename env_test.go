@@ -337,6 +337,35 @@ func Test_Env_CacheResult(t *testing.T) {
 		at.Equal(second1, second2)
 		at.NotEqual(first1, second1)
 	})
+	t.Run("WithCleanup", func(t *testing.T) {
+		tMock := &internal.TestMock{TestName: t.Name()}
+		env := newTestEnv(tMock)
+
+		callbackCalled := 0
+		cleanupCalled := 0
+		var callbackFunc FixtureFunction = func() (*Result, error) {
+			callbackCalled++
+			cleanup := func() {
+				cleanupCalled++
+			}
+			return NewResultWithCleanup(callbackCalled, cleanup), nil
+		}
+
+		res := env.CacheResult(callbackFunc)
+		require.Equal(t, 1, res)
+		require.Equal(t, 1, callbackCalled)
+		require.Equal(t, cleanupCalled, 0)
+
+		// got value from cache
+		res = env.CacheResult(callbackFunc)
+		require.Equal(t, 1, res)
+		require.Equal(t, 1, callbackCalled)
+		require.Equal(t, cleanupCalled, 0)
+
+		tMock.CallCleanup()
+		require.Equal(t, 1, callbackCalled)
+		require.Equal(t, 1, cleanupCalled)
+	})
 	t.Run("Panic", func(t *testing.T) {
 		at := assert.New(t)
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
