@@ -12,11 +12,13 @@ import (
 // counter fixture - increment globalCounter every non cached call
 // and return new globalCounter value
 func counter(e fixenv.Env) int {
-	return fixenv.Cache(e, nil, nil, func() (res int, err error) {
+	f := func() (*fixenv.GenericResult[int], error) {
 		globalCounter++
 		e.T().Logf("increment globalCounter to: ")
-		return globalCounter, nil
-	})
+		return fixenv.NewGenericResult(globalCounter), nil
+	}
+
+	return fixenv.CacheResult(e, f)
 }
 
 func TestCounter(t *testing.T) {

@@ -3,18 +3,32 @@ package fixenv
 import "errors"
 
 // Env - fixture cache engine.
+// Env interface described TEnv method and need for easy reuse different Envs with
+// same fixtures.
+//
+// The interface can be extended.
+// Create own Envs with embed TEnv or the interface for auto-implement all methods
+// in the future.
 type Env interface {
 	// T - return t object of current test/benchmark.
 	T() T
 
-	// Cache cache result of f calls
+	// CacheResult add result of call f to cache and return same result for all
+	// calls for the same function and cache options within cache scope
+	CacheResult(f FixtureFunction, options ...CacheOptions) interface{}
+
+	// Cache result of f calls
 	// f call exactly once for every combination of scope and params
 	// params must be json serializable (deserialize not need)
+	// Deprecated: will be removed in next versions
+	// Use Env.CacheResult instead.
 	Cache(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
 
 	// CacheWithCleanup cache result of f calls
 	// f call exactly once for every combination of scope and params
 	// params must be json serializable (deserialize not need)
+	// Deprecated: will be removed in next versions
+	// Use Env.CacheResult instead.
 	CacheWithCleanup(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{}
 }
 
@@ -77,6 +91,37 @@ type FixtureOptions struct {
 	// cleanupFunc if not nil - called for cleanup fixture results
 	// internal implementation details
 	cleanupFunc FixtureCleanupFunc
+}
+
+// FixtureFunction - callback function with structured result
+type FixtureFunction func() (*Result, error)
+
+// Result of fixture callback
+type Result struct {
+	Value interface{}
+	ResultAdditional
+}
+
+type ResultAdditional struct {
+	Cleanup FixtureCleanupFunc
+}
+
+func NewResult(res interface{}) *Result {
+	return &Result{Value: res}
+}
+
+func NewResultWithCleanup(res interface{}, cleanup FixtureCleanupFunc) *Result {
+	return &Result{Value: res, ResultAdditional: ResultAdditional{Cleanup: cleanup}}
+}
+
+type CacheOptions struct {
+	// Scope for cache result
+	Scope CacheScope
+
+	// Key for cache results, must be json serializable value
+	CacheKey interface{}
+
+	additionlSkipExternalCalls int
 }
 
 // T is subtype of testing.TB

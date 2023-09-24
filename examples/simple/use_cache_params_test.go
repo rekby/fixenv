@@ -14,9 +14,11 @@ import (
 // namedRandom return random number for new name args
 // but return same value for all calls with same names
 func namedRandom(e fixenv.Env, name string) int {
-	return fixenv.Cache(e, name, nil, func() (res int, err error) {
-		return rand.Int(), nil
-	})
+	f := func() (*fixenv.GenericResult[int], error) {
+		return fixenv.NewGenericResult(rand.Int()), nil
+	}
+
+	return fixenv.CacheResult(e, f, fixenv.CacheOptions{CacheKey: name})
 }
 
 func TestNamedRandom(t *testing.T) {

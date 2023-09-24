@@ -83,6 +83,8 @@ func (e *EnvT) T() T {
 // opt - fixture options, nil for default options.
 // f - callback - fixture body.
 // Cache guarantee for call f exactly once for same Cache called and params combination.
+// Deprecated: will be removed in next versions.
+// Use EnvT.CacheResult instead
 func (e *EnvT) Cache(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{} {
 	return e.cache(cacheKey, opt, f)
 }
@@ -99,6 +101,8 @@ func (e *EnvT) Cache(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbac
 // f - callback - fixture body.
 // cleanup, returned from f called while fixture cleanup
 // Cache guarantee for call f exactly once for same Cache called and params combination.
+// Deprecated: will be removed in next versions.
+// Use EnvT.CacheResult instead
 func (e *EnvT) CacheWithCleanup(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{} {
 	if opt == nil {
 		opt = &FixtureOptions{}
@@ -117,6 +121,43 @@ func (e *EnvT) CacheWithCleanup(cacheKey interface{}, opt *FixtureOptions, f Fix
 	}
 
 	return e.cache(cacheKey, opt, fWithoutCleanup)
+}
+
+// CacheResult call f callback once and cache result (ok and error),
+// then return same result for all calls of the callback without additional calls
+// f with same options calls max once per test (or defined test scope)
+func (e *EnvT) CacheResult(f FixtureFunction, options ...CacheOptions) interface{} {
+	var cacheOptions CacheOptions
+	switch len(options) {
+	case 0:
+		cacheOptions = CacheOptions{}
+	case 1:
+		cacheOptions = options[0]
+	default:
+		panic(fmt.Errorf("max len of cache result cacheOptions is 1, given: %v", len(options)))
+	}
+
+	var resCleanupFunc FixtureCleanupFunc
+
+	var fWithoutCleanup FixtureCallbackFunc = func() (res interface{}, err error) {
+		result, err := f()
+		resCleanupFunc = result.Cleanup
+		return result.Value, err
+	}
+
+	opt := &FixtureOptions{}
+	opt.Scope = cacheOptions.Scope
+	opt.additionlSkipExternalCalls = cacheOptions.additionlSkipExternalCalls
+	opt.cleanupFunc = resCleanupFunc
+
+	opt.cleanupFunc = func() {
+		if resCleanupFunc != nil {
+			resCleanupFunc()
+		}
+	}
+
+	return e.cache(cacheOptions.CacheKey, opt, fWithoutCleanup)
+
 }
 
 // cache must be call from first-level public function
