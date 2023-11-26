@@ -141,6 +141,10 @@ func (e *EnvT) CacheResult(f FixtureFunction, options ...CacheOptions) interface
 
 	var fWithoutCleanup FixtureCallbackFunc = func() (res interface{}, err error) {
 		result, err := f()
+		if result == nil {
+			return nil, err
+		}
+
 		resCleanupFunc = result.Cleanup
 		return result.Value, err
 	}

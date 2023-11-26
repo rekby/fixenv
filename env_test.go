@@ -380,6 +380,26 @@ func Test_Env_CacheResult(t *testing.T) {
 			rndFix(e, "first")
 		})
 	})
+	t.Run("WithNilResult", func(t *testing.T) {
+		at := assert.New(t)
+		tMock := &internal.TestMock{TestName: "mock"}
+		e := newTestEnv(tMock)
+
+		testErr := errors.New("test err")
+
+		failedFix := func(e Env) int {
+			return e.CacheResult(func() (*Result, error) {
+				return nil, testErr
+			}).(int)
+		}
+		done := make(chan bool)
+		go func() {
+			defer close(done)
+			failedFix(e)
+		}()
+		<-done
+		at.Equal(1, len(tMock.Fatals))
+	})
 }
 
 func Test_FixtureWrapper(t *testing.T) {
