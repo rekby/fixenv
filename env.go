@@ -299,7 +299,8 @@ func (e *EnvT) fixtureCallWrapper(key cacheKey, f FixtureCallbackFunc, opt *Fixt
 		e.m.Unlock()
 
 		if si == nil {
-			e.t.Fatalf("Unexpected scope. Create env for test %q", scopeName)
+			e.t.Fatalf("Unexpected scope: %q. Initialize package scope before use."+
+				"For scope %s use fixenv.RunTests", scopeName, packageScopeName)
 			// not reachable
 			return nil, nil
 		}

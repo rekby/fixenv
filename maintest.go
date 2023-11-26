@@ -1,10 +1,13 @@
 package fixenv
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sync"
 )
+
+var errTooManyOptionalArgs = errors.New("allow not more then one optional arg")
 
 // FatalfFunction function signature of Fatalf
 type FatalfFunction func(format string, args ...interface{})
@@ -34,16 +37,50 @@ type CreateMainTestEnvOpts struct {
 	SkipNow SkipNowFunction
 }
 
+// packageLevelVirtualTest now used for tests only
+var lastPackageLevelVirtualTest *virtualTest
+
 // CreateMainTestEnv called from TestMain for create global environment.
 // It need only for use ScopePackage cache scope.
 // If ScopePackage not used - no need to create main env.
 func CreateMainTestEnv(opts *CreateMainTestEnvOpts) (env *EnvT, tearDown func()) {
+	// TODO: handle second time initialize
 	globalMutex.Lock()
 	packageLevelVirtualTest := newVirtualTest(opts)
+	lastPackageLevelVirtualTest = packageLevelVirtualTest
 	globalMutex.Unlock()
 
 	env = New(packageLevelVirtualTest) // register global test for env
 	return env, packageLevelVirtualTest.cleanup
+}
+
+// RunTests runs the tests. It returns an exit code to pass to os.Exit.
+//
+// Usage:
+// declare in _test file TestMain function:
+//
+// func TestMain(m *testing.M) {
+//	 os.Exit(fixenv.RunTests(m))
+// }
+func RunTests(m RunTestsI, opts ...CreateMainTestEnvOpts) int {
+	var options *CreateMainTestEnvOpts
+	switch len(opts) {
+	case 0:
+		// pass
+	case 1:
+		options = &opts[0]
+	default:
+		panic(errTooManyOptionalArgs)
+	}
+
+	_, cancel := CreateMainTestEnv(options)
+	defer cancel()
+	return m.Run()
+}
+
+type RunTestsI interface {
+	// Run runs the tests. It returns an exit code to pass to os.Exit.
+	Run() (code int)
 }
 
 // virtualTest implement T interface for global env scope

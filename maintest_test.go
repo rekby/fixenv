@@ -1,6 +1,7 @@
 package fixenv
 
 import (
+	"errors"
 	"runtime"
 	"sync"
 	"testing"
@@ -76,3 +77,89 @@ func TestCreateMainTestEnv(t *testing.T) {
 		})
 	})
 }
+
+func TestRunTests(t *testing.T) {
+	expectedReturnCode := 123
+
+	checkInitialized := func(t *testing.T) {
+		t.Helper()
+
+		globalMutex.Lock()
+		defer globalMutex.Unlock()
+
+		if _, ok := globalScopeInfo[packageScopeName]; !ok {
+			t.Fatal()
+		}
+	}
+	cleanGlobalState := func() {
+		globalMutex.Lock()
+		defer globalMutex.Unlock()
+
+		delete(globalScopeInfo, packageScopeName)
+	}
+
+	t.Run("without options", func(t *testing.T) {
+		m := &mTestsMock{
+			returnCode: expectedReturnCode,
+			run: func() {
+				checkInitialized(t)
+			},
+		}
+
+		if res := RunTests(m); res != expectedReturnCode {
+			t.Fatalf("%v != %v", res, expectedReturnCode)
+		}
+		cleanGlobalState()
+	})
+	t.Run("with options", func(t *testing.T) {
+		m := &mTestsMock{
+			returnCode: expectedReturnCode,
+			run: func() {
+				checkInitialized(t)
+				lastPackageLevelVirtualTest.SkipNow()
+			},
+		}
+
+		called := false
+		RunTests(m, CreateMainTestEnvOpts{SkipNow: func() {
+			called = true
+		}})
+		if !called {
+			t.Fatal()
+		}
+		cleanGlobalState()
+	})
+	t.Run("with two options", func(t *testing.T) {
+		defer func() {
+			cleanGlobalState()
+
+			rec := recover()
+			if !errors.Is(rec.(error), errTooManyOptionalArgs) {
+				t.Fatal(rec)
+			}
+		}()
+		m := &mTestsMock{
+			run: func() {
+				checkInitialized(t)
+			},
+		}
+		RunTests(m, CreateMainTestEnvOpts{}, CreateMainTestEnvOpts{})
+	})
+}
+
+type mTestsMock struct {
+	runCalled  bool
+	returnCode int
+	run        func()
+}
+
+func (r *mTestsMock) Run() (code int) {
+	r.runCalled = true
+	if r.run != nil {
+		r.run()
+	}
+	return r.returnCode
+}
+
+// check interface implementation
+var _ RunTestsI = &mTestsMock{}
