@@ -74,7 +74,7 @@ func Test_Env__NewEnv(t *testing.T) {
 }
 
 func testFailedFixture(env Env) {
-	env.Cache(nil, nil, func() (res interface{}, err error) {
+	env.CacheResult(func() (*Result, error) {
 		return nil, errors.New("test error")
 	})
 }
@@ -86,10 +86,10 @@ func Test_Env_Cache(t *testing.T) {
 
 		val := 0
 		cntF := func() int {
-			res := e.Cache(nil, nil, func() (res interface{}, err error) {
+			res := e.CacheResult(func() (*Result, error) {
 				val++
 				e.T().Logf("val: ", val)
-				return val, nil
+				return NewResult(val), nil
 			})
 			return res.(int)
 		}
@@ -107,10 +107,10 @@ func Test_Env_Cache(t *testing.T) {
 
 		val := 0
 		cntF := func(env Env) int {
-			res := env.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
+			res := env.CacheResult(func() (*Result, error) {
 				val++
-				return val, nil
-			})
+				return NewResult(val), nil
+			}, CacheOptions{Scope: ScopeTest})
 			return res.(int)
 		}
 
@@ -136,10 +136,10 @@ func Test_Env_Cache(t *testing.T) {
 
 		val := 0
 		cntF := func(env Env) int {
-			res := env.Cache(nil, &FixtureOptions{Scope: ScopePackage}, func() (res interface{}, err error) {
+			res := env.CacheResult(func() (*Result, error) {
 				val++
-				return val, nil
-			})
+				return NewResult(val), nil
+			}, CacheOptions{Scope: ScopePackage})
 			return res.(int)
 		}
 
@@ -186,9 +186,9 @@ func Test_Env_Cache(t *testing.T) {
 		defer tMock.CallCleanup()
 		e := newTestEnv(tMock)
 		runUntilFatal(func() {
-			e.Cache(param, nil, func() (res interface{}, err error) {
-				return nil, nil
-			})
+			e.CacheResult(func() (*Result, error) {
+				return NewResult(nil), nil
+			}, CacheOptions{CacheKey: param})
 		})
 		at.Len(tMock.Fatals, 1)
 	})
@@ -199,15 +199,15 @@ func Test_Env_Cache(t *testing.T) {
 		e := newTestEnv(tMock)
 
 		cnt := 0
-		res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
+		res := e.CacheResult(func() (*Result, error) {
 			cnt++
-			return cnt, nil
+			return NewResult(cnt), nil
 		})
 		at.Equal(1, res)
-
-		res = e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
+		res = e.CacheResult(func() (*Result, error) {
 			cnt++
-			return cnt, nil
+			return NewResult(cnt), nil
+
 		})
 		at.Equal(1, res)
 	})
@@ -219,17 +219,19 @@ func Test_Env_Cache(t *testing.T) {
 
 		cnt := 0
 		func() {
-			res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
+			res := e.CacheResult(func() (*Result, error) {
 				cnt++
-				return cnt, nil
+				return NewResult(cnt), nil
+
 			})
 			at.Equal(1, res)
 		}()
 
 		func() {
-			res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
+			res := e.CacheResult(func() (*Result, error) {
 				cnt++
-				return cnt, nil
+				return NewResult(cnt), nil
+
 			})
 			at.Equal(2, res)
 		}()
@@ -242,7 +244,7 @@ func Test_Env_Cache(t *testing.T) {
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := New(tMock)
 		at.Panics(func() {
-			e.Cache(nil, nil, func() (res interface{}, err error) {
+			e.CacheResult(func() (*Result, error) {
 				return nil, ErrSkipTest
 			})
 		})
@@ -469,7 +471,7 @@ func Test_Env_Skip(t *testing.T) {
 
 	skipFixtureCallTimes := 0
 	skipFixture := func() int {
-		res := tEnv.Cache(nil, nil, func() (res interface{}, err error) {
+		res := tEnv.CacheResult(func() (*Result, error) {
 			skipFixtureCallTimes++
 			return nil, ErrSkipTest
 		})
@@ -547,12 +549,12 @@ func Test_Env_TearDown(t *testing.T) {
 		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 0)
 		at.Len(e1.c.store, 0)
 
-		e1.Cache(1, nil, func() (res interface{}, err error) {
+		e1.CacheResult(func() (*Result, error) {
+			return NewResult(nil), nil
+		}, CacheOptions{CacheKey: 1})
+		e1.CacheResult(func() (*Result, error) {
 			return nil, nil
-		})
-		e1.Cache(2, nil, func() (res interface{}, err error) {
-			return nil, nil
-		})
+		}, CacheOptions{CacheKey: 2})
 		at.Len(e1.scopes, 1)
 		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 2)
 		at.Len(e1.c.store, 2)
@@ -566,9 +568,9 @@ func Test_Env_TearDown(t *testing.T) {
 		at.Len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys(), 0)
 		at.Len(e1.c.store, 2)
 
-		e2.Cache(1, nil, func() (res interface{}, err error) {
+		e2.CacheResult(func() (*Result, error) {
 			return nil, nil
-		})
+		}, CacheOptions{CacheKey: 1})
 
 		at.Len(e1.scopes, 2)
 		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 2)

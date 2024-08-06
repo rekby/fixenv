@@ -94,6 +94,7 @@ type FixtureOptions struct {
 }
 
 // FixtureFunction - callback function with structured result
+// the function can return ErrSkipTest error for skip the test
 type FixtureFunction func() (*Result, error)
 
 // Result of fixture callback
