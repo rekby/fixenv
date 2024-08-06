@@ -86,10 +86,10 @@ func Test_Env_Cache(t *testing.T) {
 
 		val := 0
 		cntF := func() int {
-			res := e.CacheResult(func() (*Result, error) {
+			res := e.Cache(nil, nil, func() (res interface{}, err error) {
 				val++
 				e.T().Logf("val: ", val)
-				return NewResult(val), nil
+				return val, nil
 			})
 			return res.(int)
 		}
@@ -107,10 +107,10 @@ func Test_Env_Cache(t *testing.T) {
 
 		val := 0
 		cntF := func(env Env) int {
-			res := env.CacheResult(func() (*Result, error) {
+			res := env.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
 				val++
-				return NewResult(val), nil
-			}, CacheOptions{Scope: ScopeTest})
+				return val, nil
+			})
 			return res.(int)
 		}
 
@@ -136,10 +136,10 @@ func Test_Env_Cache(t *testing.T) {
 
 		val := 0
 		cntF := func(env Env) int {
-			res := env.CacheResult(func() (*Result, error) {
+			res := env.Cache(nil, &FixtureOptions{Scope: ScopePackage}, func() (res interface{}, err error) {
 				val++
-				return NewResult(val), nil
-			}, CacheOptions{Scope: ScopePackage})
+				return val, nil
+			})
 			return res.(int)
 		}
 
@@ -186,9 +186,9 @@ func Test_Env_Cache(t *testing.T) {
 		defer tMock.CallCleanup()
 		e := newTestEnv(tMock)
 		runUntilFatal(func() {
-			e.CacheResult(func() (*Result, error) {
-				return NewResult(nil), nil
-			}, CacheOptions{CacheKey: param})
+			e.Cache(param, nil, func() (res interface{}, err error) {
+				return nil, nil
+			})
 		})
 		at.Len(tMock.Fatals, 1)
 	})
@@ -199,15 +199,15 @@ func Test_Env_Cache(t *testing.T) {
 		e := newTestEnv(tMock)
 
 		cnt := 0
-		res := e.CacheResult(func() (*Result, error) {
+		res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
 			cnt++
-			return NewResult(cnt), nil
+			return cnt, nil
 		})
 		at.Equal(1, res)
-		res = e.CacheResult(func() (*Result, error) {
-			cnt++
-			return NewResult(cnt), nil
 
+		res = e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
+			cnt++
+			return cnt, nil
 		})
 		at.Equal(1, res)
 	})
@@ -219,19 +219,17 @@ func Test_Env_Cache(t *testing.T) {
 
 		cnt := 0
 		func() {
-			res := e.CacheResult(func() (*Result, error) {
+			res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
 				cnt++
-				return NewResult(cnt), nil
-
+				return cnt, nil
 			})
 			at.Equal(1, res)
 		}()
 
 		func() {
-			res := e.CacheResult(func() (*Result, error) {
+			res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
 				cnt++
-				return NewResult(cnt), nil
-
+				return cnt, nil
 			})
 			at.Equal(2, res)
 		}()
@@ -244,7 +242,7 @@ func Test_Env_Cache(t *testing.T) {
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := New(tMock)
 		at.Panics(func() {
-			e.CacheResult(func() (*Result, error) {
+			e.Cache(nil, nil, func() (res interface{}, err error) {
 				return nil, ErrSkipTest
 			})
 		})
