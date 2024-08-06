@@ -126,6 +126,7 @@ func (e *EnvT) CacheWithCleanup(cacheKey interface{}, opt *FixtureOptions, f Fix
 // CacheResult call f callback once and cache result (ok and error),
 // then return same result for all calls of the callback without additional calls
 // f with same options calls max once per test (or defined test scope)
+// See to generic wrapper: CacheResult
 func (e *EnvT) CacheResult(f FixtureFunction, options ...CacheOptions) interface{} {
 	var cacheOptions CacheOptions
 	switch len(options) {

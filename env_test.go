@@ -74,7 +74,7 @@ func Test_Env__NewEnv(t *testing.T) {
 }
 
 func testFailedFixture(env Env) {
-	env.Cache(nil, nil, func() (res interface{}, err error) {
+	env.CacheResult(func() (*Result, error) {
 		return nil, errors.New("test error")
 	})
 }
@@ -469,7 +469,7 @@ func Test_Env_Skip(t *testing.T) {
 
 	skipFixtureCallTimes := 0
 	skipFixture := func() int {
-		res := tEnv.Cache(nil, nil, func() (res interface{}, err error) {
+		res := tEnv.CacheResult(func() (*Result, error) {
 			skipFixtureCallTimes++
 			return nil, ErrSkipTest
 		})
@@ -547,12 +547,12 @@ func Test_Env_TearDown(t *testing.T) {
 		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 0)
 		at.Len(e1.c.store, 0)
 
-		e1.Cache(1, nil, func() (res interface{}, err error) {
+		e1.CacheResult(func() (*Result, error) {
+			return NewResult(nil), nil
+		}, CacheOptions{CacheKey: 1})
+		e1.CacheResult(func() (*Result, error) {
 			return nil, nil
-		})
-		e1.Cache(2, nil, func() (res interface{}, err error) {
-			return nil, nil
-		})
+		}, CacheOptions{CacheKey: 2})
 		at.Len(e1.scopes, 1)
 		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 2)
 		at.Len(e1.c.store, 2)
@@ -566,9 +566,9 @@ func Test_Env_TearDown(t *testing.T) {
 		at.Len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys(), 0)
 		at.Len(e1.c.store, 2)
 
-		e2.Cache(1, nil, func() (res interface{}, err error) {
+		e2.CacheResult(func() (*Result, error) {
 			return nil, nil
-		})
+		}, CacheOptions{CacheKey: 1})
 
 		at.Len(e1.scopes, 2)
 		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 2)

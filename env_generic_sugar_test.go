@@ -18,13 +18,15 @@ func TestCacheGeneric(t *testing.T) {
 		inParams := 123
 		inOpt := &FixtureOptions{Scope: ScopeTest}
 
-		env := envMock{onCache: func(params interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{} {
-			opt.additionlSkipExternalCalls--
-			require.Equal(t, inParams, params)
-			require.Equal(t, inOpt, opt)
-			res, _ := f()
-			return res
-		}}
+		env := envMock{
+			onCacheResult: func(opts CacheOptions, f FixtureFunction) interface{} {
+				opts.additionlSkipExternalCalls--
+				require.Equal(t, inParams, opts.CacheKey)
+				require.Equal(t, inOpt.Scope, opts.Scope)
+				res, _ := f()
+				return res.Value
+			},
+		}
 
 		res := Cache(env, inParams, inOpt, func() (int, error) {
 			return 2, nil
@@ -58,13 +60,14 @@ func TestCacheWithCleanupGeneric(t *testing.T) {
 
 		cleanupCalledBack := 0
 
-		env := envMock{onCacheWithCleanup: func(params interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{} {
-			opt.additionlSkipExternalCalls--
-			require.Equal(t, inParams, params)
-			require.Equal(t, inOpt, opt)
-			res, _, _ := f()
-			return res
-		}}
+		env := envMock{
+			onCacheResult: func(opts CacheOptions, f FixtureFunction) interface{} {
+				require.Equal(t, inParams, opts.CacheKey)
+				require.Equal(t, inOpt.Scope, opts.Scope)
+				res, _ := f()
+				return res.Value
+			},
+		}
 
 		res := CacheWithCleanup(env, inParams, inOpt, func() (int, FixtureCleanupFunc, error) {
 			cleanup := func() {
