@@ -9,6 +9,11 @@ import (
 	"github.com/rekby/fixenv"
 )
 
+var (
+	globalCounter               = 0
+	globalTestAndSubtestCounter = 0
+)
+
 // counter fixture - increment globalCounter every non cached call
 // and return new globalCounter value
 func counter(e fixenv.Env) int {
