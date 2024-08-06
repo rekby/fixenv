@@ -10,7 +10,7 @@ import (
 func TestHttpServer(t *testing.T) {
 	e := fixenv.New(t)
 	server := HTTPServer(e)
-	server.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	server.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(writer, "OK")
 	})
 	resp, err := http.Get(server.URL)
