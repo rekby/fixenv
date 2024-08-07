@@ -1,4 +1,4 @@
-package simple_main
+package simple
 
 import (
 	"github.com/rekby/fixenv"

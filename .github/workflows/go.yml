@@ -29,10 +29,18 @@ jobs:
     - name: Build
       run: go build -v ./...
 
+    - name: Build examples
+      if: ${{ matrix.goVersion == env.GO_VERSION }}
+      run: cd examples; go build -v ./...
+
     - name: Test
       run: go test ./...
 
-    - name: Test with coverage profiler
+    - name: Test examples
+      if: ${{ matrix.goVersion == env.GO_VERSION }}
+      run: cd examples; go test ./...
+
+    - name: Test library with coverage profiler
       if: ${{ matrix.goVersion == env.GO_VERSION }}
       run: go test -test.count=10 -race -covermode atomic -coverprofile=covprofile.out  ./...
 
@@ -41,6 +49,13 @@ jobs:
       uses: golangci/golangci-lint-action@v2
       with:
         version: latest
+
+    - name: golangci-lint examples
+      if: ${{ matrix.goVersion == env.GO_VERSION }}
+      uses: golangci/golangci-lint-action@v2
+      with:
+        version: latest
+        working-directory: examples
 
     - name: Coveralls install goveralls
       if: ${{ matrix.goVersion == env.GO_VERSION }}

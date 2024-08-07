@@ -1,7 +1,7 @@
 //go:build go1.18
 // +build go1.18
 
-package custom_env_with_shared_content
+package customenv2
 
 import (
 	"io"
@@ -28,7 +28,7 @@ func NewEnv(t *testing.T) *Env {
 
 func testServer(e *Env) *httptest.Server {
 	f := func() (*fixenv.GenericResult[*httptest.Server], error) {
-		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 			_, _ = writer.Write([]byte(e.Resp))
 		}))
 		e.T().(testing.TB).Logf("Http server start, url: %q", server.URL)

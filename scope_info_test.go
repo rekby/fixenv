@@ -6,21 +6,17 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestScopeInfo_AddKey(t *testing.T) {
-	at := assert.New(t)
-
 	t.Run("simple", func(t *testing.T) {
 		si := newScopeInfo(t)
-		at.Equal(t, si.t)
-		at.Len(si.cacheKeys, 0)
+		requireEquals(t, t, si.t)
+		requireEquals(t, len(si.cacheKeys), 0)
 
 		si.AddKey("asd")
 		si.AddKey("ddd")
-		at.Equal([]cacheKey{"asd", "ddd"}, si.cacheKeys)
+		requireEquals(t, []cacheKey{"asd", "ddd"}, si.cacheKeys)
 	})
 
 	t.Run("race", func(t *testing.T) {
@@ -49,26 +45,21 @@ func TestScopeInfo_AddKey(t *testing.T) {
 			return iInt < jInt
 		})
 
-		at := assert.New(t)
-		at.Equal(source, si.cacheKeys)
+		requireEquals(t, source, si.cacheKeys)
 	})
 }
 
 func TestScopeInfo_Keys(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
-		at := assert.New(t)
-
 		si := newScopeInfo(t)
 		si.AddKey("asd")
 		si.AddKey("kkk")
 
 		keys := si.Keys()
-		at.Equal([]cacheKey{"asd", "kkk"}, keys)
+		requireEquals(t, []cacheKey{"asd", "kkk"}, keys)
 	})
 
 	t.Run("mutex", func(t *testing.T) {
-		at := assert.New(t)
-
 		si := newScopeInfo(t)
 		si.AddKey("asd")
 		si.AddKey("kkk")
@@ -83,10 +74,10 @@ func TestScopeInfo_Keys(t *testing.T) {
 		}()
 
 		time.Sleep(waitTime)
-		at.Len(keys, 0)
+		requireEquals(t, len(keys), 0)
 
 		si.m.Unlock()
 		wg.Wait()
-		at.Equal([]cacheKey{"asd", "kkk"}, keys)
+		requireEquals(t, []cacheKey{"asd", "kkk"}, keys)
 	})
 }

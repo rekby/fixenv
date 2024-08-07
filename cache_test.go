@@ -8,16 +8,12 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 const waitTime = time.Second / 10
 
 func TestCache_DeleteKeys(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
-		at := assert.New(t)
-
 		c := newCache()
 		k1 := cacheKey("k1")
 		k2 := cacheKey("k2")
@@ -33,25 +29,23 @@ func TestCache_DeleteKeys(t *testing.T) {
 
 		c.DeleteKeys(k1, k2)
 		_, ok := c.get(k1)
-		at.False(ok)
+		requireFalse(t, ok)
 		_, ok = c.get(k2)
-		at.False(ok)
+		requireFalse(t, ok)
 		res, ok := c.get(k3)
-		at.True(ok)
-		at.Equal(val1, res.res.Value)
+		requireTrue(t, ok)
+		requireEquals(t, val1, res.res.Value.(string))
 
 		val2 := "test2"
 		c.setOnce(k1, func() (res *Result, err error) {
 			return NewResult(val2), nil
 		})
 		res, ok = c.get(k1)
-		at.True(ok)
-		at.Equal(val2, res.res.Value)
+		requireTrue(t, ok)
+		requireEquals(t, val2, res.res.Value.(string))
 	})
 
 	t.Run("mutex", func(t *testing.T) {
-		at := assert.New(t)
-
 		c := newCache()
 		c.setOnce("asd", func() (res *Result, err error) {
 			return NewResult(nil), nil
@@ -66,33 +60,31 @@ func TestCache_DeleteKeys(t *testing.T) {
 		}()
 
 		time.Sleep(waitTime)
-		at.Len(c.store, 1)
-		at.Len(c.setLocks, 1)
+		requireEquals(t, len(c.store), 1)
+		requireEquals(t, len(c.setLocks), 1)
 
 		c.m.RUnlock()
 		wg.Wait()
-		at.Len(c.store, 0)
-		at.Len(c.setLocks, 0)
+		requireEquals(t, len(c.store), 0)
+		requireEquals(t, len(c.setLocks), 0)
 	})
 }
 
 func TestCache_Get(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
-		at := assert.New(t)
 		c := newCache()
 
 		_, ok := c.get("qwe")
-		at.False(ok)
+		requireFalse(t, ok)
 
 		c.store["asd"] = cacheVal{res: NewResult("val")}
 
 		res, ok := c.get("asd")
-		at.True(ok)
-		at.Equal(cacheVal{res: NewResult("val")}, res)
+		requireTrue(t, ok)
+		requireEquals(t, cacheVal{res: NewResult("val")}, res)
 	})
 
 	t.Run("read_mutex", func(t *testing.T) {
-		at := assert.New(t)
 		c := newCache()
 		c.setOnce("asd", func() (res *Result, err error) {
 			return NewResult(nil), nil
@@ -100,11 +92,10 @@ func TestCache_Get(t *testing.T) {
 		c.m.RLock()
 		_, ok := c.get("asd")
 		c.m.RUnlock()
-		at.True(ok)
+		requireTrue(t, ok)
 	})
 
 	t.Run("write_mutex", func(t *testing.T) {
-		at := assert.New(t)
 		c := newCache()
 		c.setOnce("asd", func() (res *Result, err error) {
 			return NewResult(nil), nil
@@ -119,20 +110,18 @@ func TestCache_Get(t *testing.T) {
 		}()
 
 		time.Sleep(waitTime)
-		at.False(ok)
+		requireFalse(t, ok)
 
 		c.m.Unlock()
 		wg.Wait()
 
-		at.True(ok)
+		requireTrue(t, ok)
 	})
 
 }
 
 func TestCache_SetOnce(t *testing.T) {
 	t.Run("save_new_key", func(t *testing.T) {
-		at := assert.New(t)
-
 		c := newCache()
 		cnt := 0
 		key1 := cacheKey("1")
@@ -140,21 +129,20 @@ func TestCache_SetOnce(t *testing.T) {
 			cnt++
 			return NewResult(1), nil
 		})
-		at.Equal(1, cnt)
-		at.Equal(1, c.store[key1].res.Value)
-		at.NoError(c.store[key1].err)
+		requireEquals(t, 1, cnt)
+		requireEquals(t, 1, c.store[key1].res.Value)
+		noError(t, c.store[key1].err)
 
 		c.setOnce(key1, func() (res *Result, err error) {
 			cnt++
 			return NewResult(2), nil
 		})
-		at.Equal(1, cnt)
-		at.Equal(1, c.store[key1].res.Value)
-		at.NoError(c.store[key1].err)
+		requireEquals(t, 1, cnt)
+		requireEquals(t, 1, c.store[key1].res.Value)
+		noError(t, c.store[key1].err)
 	})
 
 	t.Run("second_set_val", func(t *testing.T) {
-		at := assert.New(t)
 		c := newCache()
 		key1 := cacheKey("1")
 		key2 := cacheKey("2")
@@ -167,16 +155,15 @@ func TestCache_SetOnce(t *testing.T) {
 			cnt++
 			return NewResult(2), nil
 		})
-		at.Equal(2, cnt)
-		at.Equal(1, c.store[key1].res.Value)
-		at.NoError(c.store[key1].err)
-		at.Equal(2, c.store[key2].res.Value)
-		at.NoError(c.store[key2].err)
+		requireEquals(t, 2, cnt)
+		requireEquals(t, 1, c.store[key1].res.Value)
+		noError(t, c.store[key1].err)
+		requireEquals(t, 2, c.store[key2].res.Value)
+		noError(t, c.store[key2].err)
 	})
 
 	// exit without return value
 	t.Run("exit_without_return", func(t *testing.T) {
-		at := assert.New(t)
 		c := newCache()
 		key := cacheKey("3")
 		var wg sync.WaitGroup
@@ -190,12 +177,11 @@ func TestCache_SetOnce(t *testing.T) {
 		}()
 		wg.Wait()
 
-		at.Nil(c.store[key].res)
-		at.Error(c.store[key].err)
+		requireNil(t, c.store[key].res)
+		isError(t, c.store[key].err)
 	})
 
 	t.Run("second_func_same_key_wait", func(t *testing.T) {
-		at := assert.New(t)
 		c := newCache()
 		key := cacheKey("1")
 
@@ -239,8 +225,8 @@ func TestCache_SetOnce(t *testing.T) {
 		// second not work until first finished
 		doneSecondVal := atomic.LoadInt64(&doneSecond)
 		_, ok := c.store[key]
-		at.False(ok)
-		at.Equal(int64(0), doneSecondVal)
+		requireFalse(t, ok)
+		requireEquals(t, int64(0), doneSecondVal)
 
 		close(firstMuNeedFinish)
 
@@ -251,12 +237,11 @@ func TestCache_SetOnce(t *testing.T) {
 		<-secondFinished
 
 		doneSecondVal = atomic.LoadInt64(&doneSecond)
-		at.Equal(1, c.store[key].res.Value)
-		at.Equal(int64(1), doneSecondVal)
+		requireEquals(t, 1, c.store[key].res.Value)
+		requireEquals(t, int64(1), doneSecondVal)
 	})
 
 	t.Run("second_func_other_key_work", func(t *testing.T) {
-		at := assert.New(t)
 		c := newCache()
 		key1 := cacheKey("1")
 		key2 := cacheKey("2")
@@ -295,8 +280,8 @@ func TestCache_SetOnce(t *testing.T) {
 		// wait first func finished
 		<-firstMuFinished
 
-		at.Equal(1, c.store[key1].res.Value)
-		at.Equal(2, c.store[key2].res.Value)
+		requireEquals(t, 1, c.store[key1].res.Value)
+		requireEquals(t, 2, c.store[key2].res.Value)
 	})
 }
 

@@ -4,11 +4,11 @@
 package simple
 
 import (
+	"github.com/stretchr/testify/require"
 	"math/rand"
 	"testing"
 
 	"github.com/rekby/fixenv"
-	"github.com/stretchr/testify/require"
 )
 
 // namedRandom return random number for new name args

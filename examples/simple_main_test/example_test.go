@@ -1,7 +1,7 @@
 //go:build go1.18
 // +build go1.18
 
-package simple_main_test
+package simple
 
 import (
 	"github.com/rekby/fixenv"
@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-var global int = -1
+var global = -1
 
 func FSingleRandom(e fixenv.Env) int {
 	var f fixenv.GenericFixtureFunction[int] = func() (*fixenv.GenericResult[int], error) {

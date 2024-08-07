@@ -7,9 +7,6 @@ import (
 	"runtime"
 	"sync"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func (e *EnvT) cloneWithTest(t T) *EnvT {
@@ -27,40 +24,36 @@ func newTestEnv(t T) *EnvT {
 func Test_Env__NewEnv(t *testing.T) {
 	t.Run("create_new_env", func(t *testing.T) {
 		initGlobalState()
-		at := assert.New(t)
 
 		tMock := &internal.TestMock{TestName: "mock"}
 		defer tMock.CallCleanup()
 
 		e := New(tMock)
-		at.Equal(tMock, e.t)
-		at.Equal(globalCache, e.c)
-		at.Equal(&globalMutex, e.m)
-		at.Equal(globalScopeInfo, e.scopes)
-		at.Len(globalCache.store, 0)
-		at.Len(globalScopeInfo, 1)
-		at.Len(tMock.Cleanups, 1)
+		requireEquals(t, tMock, e.t)
+		requireEquals(t, globalCache, e.c)
+		requireEquals(t, &globalMutex, e.m)
+		requireEquals(t, globalScopeInfo, e.scopes)
+		requireEquals(t, len(globalCache.store), 0)
+		requireEquals(t, len(globalScopeInfo), 1)
+		requireEquals(t, len(tMock.Cleanups), 1)
 	})
 
 	t.Run("global_info_cleaned", func(t *testing.T) {
-		at := assert.New(t)
-		at.Len(globalCache.store, 0)
-		at.Len(globalScopeInfo, 0)
+		requireEquals(t, len(globalCache.store), 0)
+		requireEquals(t, len(globalScopeInfo), 0)
 	})
 
 	t.Run("double_env_same_scope_same_time", func(t *testing.T) {
-		at := assert.New(t)
-
 		tMock := &internal.TestMock{TestName: "mock"}
 		defer tMock.CallCleanup()
 
 		_ = New(tMock)
-		at.Len(tMock.Fatals, 0)
+		requireEquals(t, len(tMock.Fatals), 0)
 
 		runUntilFatal(func() {
 			_ = New(tMock)
 		})
-		at.Len(tMock.Fatals, 1)
+		requireEquals(t, len(tMock.Fatals), 1)
 	})
 
 	t.Run("double_env_similar_scope_different_time", func(t *testing.T) {
@@ -81,7 +74,6 @@ func testFailedFixture(env Env) {
 
 func Test_Env_Cache(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
-		at := assert.New(t)
 		e := New(t)
 
 		val := 0
@@ -94,15 +86,14 @@ func Test_Env_Cache(t *testing.T) {
 			return res.(int)
 		}
 
-		at.Equal(1, cntF())
-		at.Equal(1, cntF())
+		requireEquals(t, 1, cntF())
+		requireEquals(t, 1, cntF())
 
 		val = 2
-		at.Equal(1, cntF())
+		requireEquals(t, 1, cntF())
 	})
 
 	t.Run("subtest_and_test_scope", func(t *testing.T) {
-		at := assert.New(t)
 		e := New(t)
 
 		val := 0
@@ -114,22 +105,20 @@ func Test_Env_Cache(t *testing.T) {
 			return res.(int)
 		}
 
-		at.Equal(1, cntF(e))
-		at.Equal(1, cntF(e))
+		requireEquals(t, 1, cntF(e))
+		requireEquals(t, 1, cntF(e))
 
 		t.Run("subtest", func(t *testing.T) {
-			at := assert.New(t)
 			subEnv := New(t)
-			at.Equal(2, cntF(subEnv))
-			at.Equal(2, cntF(subEnv))
+			requireEquals(t, 2, cntF(subEnv))
+			requireEquals(t, 2, cntF(subEnv))
 		})
 
-		at.Equal(1, cntF(e))
+		requireEquals(t, 1, cntF(e))
 
 	})
 
 	t.Run("subtest_and_package_scope", func(t *testing.T) {
-		at := assert.New(t)
 		e := New(t)
 		_, mainClose := CreateMainTestEnv(nil)
 		defer mainClose()
@@ -143,41 +132,36 @@ func Test_Env_Cache(t *testing.T) {
 			return res.(int)
 		}
 
-		at.Equal(1, cntF(e))
-		at.Equal(1, cntF(e))
+		requireEquals(t, 1, cntF(e))
+		requireEquals(t, 1, cntF(e))
 
 		t.Run("subtest", func(t *testing.T) {
-			at := assert.New(t)
 			subEnv := New(t)
-			at.Equal(1, cntF(subEnv))
-			at.Equal(1, cntF(subEnv))
+			requireEquals(t, 1, cntF(subEnv))
+			requireEquals(t, 1, cntF(subEnv))
 		})
 
-		at.Equal(1, cntF(e))
+		requireEquals(t, 1, cntF(e))
 
 	})
 
 	t.Run("fail_on_fixture_err", func(t *testing.T) {
-		at := assert.New(t)
-
 		tMock := &internal.TestMock{TestName: "mock"}
 		defer tMock.CallCleanup()
 
 		e := newTestEnv(tMock)
-		at.Len(tMock.Fatals, 0)
+		requireEquals(t, len(tMock.Fatals), 0)
 
 		runUntilFatal(func() {
 			testFailedFixture(e)
 		})
-		at.Len(tMock.Fatals, 1)
+		requireEquals(t, len(tMock.Fatals), 1)
 
 		// log message contains fixture name
-		at.Contains(tMock.Fatals[0].ResultString, "testFailedFixture")
+		requireContains(t, tMock.Fatals[0].ResultString, "testFailedFixture")
 	})
 
 	t.Run("not_serializable_param", func(t *testing.T) {
-		at := assert.New(t)
-
 		type paramT struct {
 			F func() // can't serialize func to json
 		}
@@ -190,11 +174,10 @@ func Test_Env_Cache(t *testing.T) {
 				return nil, nil
 			})
 		})
-		at.Len(tMock.Fatals, 1)
+		requireEquals(t, len(tMock.Fatals), 1)
 	})
 
 	t.Run("cache_by_caller_func", func(t *testing.T) {
-		at := assert.New(t)
 		tMock := &internal.TestMock{TestName: "mock"}
 		e := newTestEnv(tMock)
 
@@ -203,17 +186,16 @@ func Test_Env_Cache(t *testing.T) {
 			cnt++
 			return cnt, nil
 		})
-		at.Equal(1, res)
+		requireEquals(t, 1, res)
 
 		res = e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
 			cnt++
 			return cnt, nil
 		})
-		at.Equal(1, res)
+		requireEquals(t, 1, res)
 	})
 
 	t.Run("different_cache_for_diff_anonim_function", func(t *testing.T) {
-		at := assert.New(t)
 		tMock := &internal.TestMock{TestName: "mock"}
 		e := newTestEnv(tMock)
 
@@ -223,7 +205,7 @@ func Test_Env_Cache(t *testing.T) {
 				cnt++
 				return cnt, nil
 			})
-			at.Equal(1, res)
+			requireEquals(t, 1, res)
 		}()
 
 		func() {
@@ -231,22 +213,20 @@ func Test_Env_Cache(t *testing.T) {
 				cnt++
 				return cnt, nil
 			})
-			at.Equal(2, res)
+			requireEquals(t, 2, res)
 		}()
 
 	})
 
 	t.Run("check_unreachable_code", func(t *testing.T) {
-		at := assert.New(t)
-
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := New(tMock)
-		at.Panics(func() {
+		requirePanic(t, func() {
 			e.Cache(nil, nil, func() (res interface{}, err error) {
 				return nil, ErrSkipTest
 			})
 		})
-		at.Equal(1, tMock.SkipCount)
+		requireEquals(t, 1, tMock.SkipCount)
 	})
 }
 
@@ -262,13 +242,13 @@ func Test_Env_CacheWithCleanup(t *testing.T) {
 		}
 
 		res := env.CacheWithCleanup(nil, nil, callbackFunc)
-		require.Equal(t, 1, res)
-		require.Equal(t, 1, callbackCalled)
+		requireEquals(t, 1, res)
+		requireEquals(t, 1, callbackCalled)
 
 		// got value from cache
 		res = env.CacheWithCleanup(nil, nil, callbackFunc)
-		require.Equal(t, 1, res)
-		require.Equal(t, 1, callbackCalled)
+		requireEquals(t, 1, res)
+		requireEquals(t, 1, callbackCalled)
 	})
 
 	t.Run("WithCleanup", func(t *testing.T) {
@@ -286,25 +266,24 @@ func Test_Env_CacheWithCleanup(t *testing.T) {
 		}
 
 		res := env.CacheWithCleanup(nil, nil, callbackFunc)
-		require.Equal(t, 1, res)
-		require.Equal(t, 1, callbackCalled)
-		require.Equal(t, cleanupCalled, 0)
+		requireEquals(t, 1, res)
+		requireEquals(t, 1, callbackCalled)
+		requireEquals(t, cleanupCalled, 0)
 
 		// got value from cache
 		res = env.CacheWithCleanup(nil, nil, callbackFunc)
-		require.Equal(t, 1, res)
-		require.Equal(t, 1, callbackCalled)
-		require.Equal(t, cleanupCalled, 0)
+		requireEquals(t, 1, res)
+		requireEquals(t, 1, callbackCalled)
+		requireEquals(t, cleanupCalled, 0)
 
 		tMock.CallCleanup()
-		require.Equal(t, 1, callbackCalled)
-		require.Equal(t, 1, cleanupCalled)
+		requireEquals(t, 1, callbackCalled)
+		requireEquals(t, 1, cleanupCalled)
 	})
 }
 
 func Test_Env_CacheResult(t *testing.T) {
 	t.Run("Simple", func(t *testing.T) {
-		at := assert.New(t)
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := New(tMock)
 
@@ -316,10 +295,9 @@ func Test_Env_CacheResult(t *testing.T) {
 		first := rndFix(e)
 		second := rndFix(e)
 
-		at.Equal(first, second)
+		requireEquals(t, first, second)
 	})
 	t.Run("Options", func(t *testing.T) {
-		at := assert.New(t)
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := New(tMock)
 
@@ -333,9 +311,9 @@ func Test_Env_CacheResult(t *testing.T) {
 		second1 := rndFix(e, "second")
 		second2 := rndFix(e, "second")
 
-		at.Equal(first1, first2)
-		at.Equal(second1, second2)
-		at.NotEqual(first1, second1)
+		requireEquals(t, first1, first2)
+		requireEquals(t, second1, second2)
+		requireNotEquals(t, first1, second1)
 	})
 	t.Run("WithCleanup", func(t *testing.T) {
 		tMock := &internal.TestMock{TestName: t.Name()}
@@ -352,22 +330,21 @@ func Test_Env_CacheResult(t *testing.T) {
 		}
 
 		res := env.CacheResult(callbackFunc)
-		require.Equal(t, 1, res)
-		require.Equal(t, 1, callbackCalled)
-		require.Equal(t, cleanupCalled, 0)
+		requireEquals(t, 1, res)
+		requireEquals(t, 1, callbackCalled)
+		requireEquals(t, cleanupCalled, 0)
 
 		// got value from cache
 		res = env.CacheResult(callbackFunc)
-		require.Equal(t, 1, res)
-		require.Equal(t, 1, callbackCalled)
-		require.Equal(t, cleanupCalled, 0)
+		requireEquals(t, 1, res)
+		requireEquals(t, 1, callbackCalled)
+		requireEquals(t, cleanupCalled, 0)
 
 		tMock.CallCleanup()
-		require.Equal(t, 1, callbackCalled)
-		require.Equal(t, 1, cleanupCalled)
+		requireEquals(t, 1, callbackCalled)
+		requireEquals(t, 1, cleanupCalled)
 	})
 	t.Run("Panic", func(t *testing.T) {
-		at := assert.New(t)
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := New(tMock)
 
@@ -376,12 +353,11 @@ func Test_Env_CacheResult(t *testing.T) {
 				return NewResult(rand.Int()), nil
 			}, CacheOptions{CacheKey: name}, CacheOptions{CacheKey: name}).(int)
 		}
-		at.Panics(func() {
+		requirePanic(t, func() {
 			rndFix(e, "first")
 		})
 	})
 	t.Run("WithNilResult", func(t *testing.T) {
-		at := assert.New(t)
 		tMock := &internal.TestMock{TestName: "mock"}
 		e := newTestEnv(tMock)
 
@@ -398,14 +374,12 @@ func Test_Env_CacheResult(t *testing.T) {
 			failedFix(e)
 		}()
 		<-done
-		at.Equal(1, len(tMock.Fatals))
+		requireEquals(t, 1, len(tMock.Fatals))
 	})
 }
 
 func Test_FixtureWrapper(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		at := assert.New(t)
-
 		tMock := &internal.TestMock{TestName: "mock"}
 		defer tMock.CallCleanup()
 
@@ -418,13 +392,13 @@ func Test_FixtureWrapper(t *testing.T) {
 			return NewResult(cnt), errors.New("test")
 		}, CacheOptions{})
 		si := e.scopes[makeScopeName(tMock.Name(), ScopeTest)]
-		at.Equal(0, cnt)
-		at.Len(si.cacheKeys, 0)
+		requireEquals(t, 0, cnt)
+		requireEquals(t, len(si.cacheKeys), 0)
 		res1, err := w()
-		at.Equal(1, res1.Value)
-		at.EqualError(err, "test")
-		at.Equal(1, cnt)
-		at.Equal([]cacheKey{key}, si.cacheKeys)
+		requireEquals(t, 1, res1.Value)
+		requireEquals(t, err.Error(), "test")
+		requireEquals(t, 1, cnt)
+		requireEquals(t, []cacheKey{key}, si.cacheKeys)
 
 		cnt = 0
 		key2 := cacheKey("asd")
@@ -434,15 +408,13 @@ func Test_FixtureWrapper(t *testing.T) {
 			cleanup := func() {}
 			return NewResultWithCleanup(cnt, cleanup), nil
 		}, CacheOptions{})
-		at.Len(tMock.Cleanups, cleanupsLen)
+		requireEquals(t, len(tMock.Cleanups), cleanupsLen)
 		_, _ = w()
-		at.Equal([]cacheKey{key, key2}, si.cacheKeys)
-		at.Len(tMock.Cleanups, cleanupsLen+1)
+		requireEquals(t, []cacheKey{key, key2}, si.cacheKeys)
+		requireEquals(t, len(tMock.Cleanups), cleanupsLen+1)
 	})
 
 	t.Run("unknown_scope_info", func(t *testing.T) {
-		at := assert.New(t)
-
 		tMock := &internal.TestMock{TestName: "mock"}
 		defer tMock.CallCleanup()
 		e := newTestEnv(tMock)
@@ -457,12 +429,11 @@ func Test_FixtureWrapper(t *testing.T) {
 
 		// revert test name for good cleanup
 		tMock.TestName = "mock"
-		at.Len(tMock.Fatals, 1)
+		requireEquals(t, len(tMock.Fatals), 1)
 	})
 }
 
 func Test_Env_Skip(t *testing.T) {
-	at := assert.New(t)
 	tm := &internal.TestMock{TestName: "mock"}
 	tEnv := newTestEnv(tm)
 
@@ -483,11 +454,11 @@ func Test_Env_Skip(t *testing.T) {
 		go func() {
 			callbackExited := true
 			defer func() {
-				at.True(callbackExited)
+				requireTrue(t, callbackExited)
 				panicValue := recover()
 
 				// no panic value (go exit)
-				at.Nil(panicValue)
+				requireNil(t, panicValue)
 				wg.Done()
 			}()
 
@@ -508,9 +479,9 @@ func Test_Env_Skip(t *testing.T) {
 		executionStopped = false
 	})
 
-	at.True(executionStarted)
-	at.True(executionStopped)
-	at.Equal(1, skipFixtureCallTimes)
+	requireTrue(t, executionStarted)
+	requireTrue(t, executionStopped)
+	requireEquals(t, 1, skipFixtureCallTimes)
 
 	// skip second time, without call fixture - from cache
 	executionStarted = false
@@ -522,29 +493,26 @@ func Test_Env_Skip(t *testing.T) {
 		executionStopped = false
 	})
 
-	at.True(executionStarted)
-	at.True(executionStopped)
-	at.Equal(1, skipFixtureCallTimes)
+	requireTrue(t, executionStarted)
+	requireTrue(t, executionStopped)
+	requireEquals(t, 1, skipFixtureCallTimes)
 
 }
 
 func Test_Env_T(t *testing.T) {
-	at := assert.New(t)
 	e := New(t)
-	at.Equal(t, e.T())
+	requireEquals(t, t, e.T())
 }
 
 func Test_Env_TearDown(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		at := assert.New(t)
-
 		t1 := &internal.TestMock{TestName: "mock"}
 		// defer t1.callCleanup - direct call e1.tearDown - for test
 
 		e1 := newTestEnv(t1)
-		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 0)
-		at.Len(e1.c.store, 0)
+		requireEquals(t, len(e1.scopes), 1)
+		requireEquals(t, len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys()), 0)
+		requireEquals(t, len(e1.c.store), 0)
 
 		e1.CacheResult(func() (*Result, error) {
 			return NewResult(nil), nil
@@ -552,41 +520,40 @@ func Test_Env_TearDown(t *testing.T) {
 		e1.CacheResult(func() (*Result, error) {
 			return nil, nil
 		}, CacheOptions{CacheKey: 2})
-		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 2)
-		at.Len(e1.c.store, 2)
+		requireEquals(t, len(e1.scopes), 1)
+		requireEquals(t, len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys()), 2)
+		requireEquals(t, len(e1.c.store), 2)
 
 		t2 := &internal.TestMock{TestName: "mock2"}
 		// defer t2.callCleanup - direct call e2.tearDown - for test
 
 		e2 := e1.cloneWithTest(t2)
-		at.Len(e1.scopes, 2)
-		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 2)
-		at.Len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys(), 0)
-		at.Len(e1.c.store, 2)
+		requireEquals(t, len(e1.scopes), 2)
+		requireEquals(t, len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys()), 2)
+		requireEquals(t, len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys()), 0)
+		requireEquals(t, len(e1.c.store), 2)
 
 		e2.CacheResult(func() (*Result, error) {
 			return nil, nil
 		}, CacheOptions{CacheKey: 1})
 
-		at.Len(e1.scopes, 2)
-		at.Len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys(), 2)
-		at.Len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys(), 1)
-		at.Len(e1.c.store, 3)
+		requireEquals(t, len(e1.scopes), 2)
+		requireEquals(t, len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys()), 2)
+		requireEquals(t, len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys()), 1)
+		requireEquals(t, len(e1.c.store), 3)
 
 		// finish first test and tearDown e1
 		e1.tearDown()
-		at.Len(e1.scopes, 1)
-		at.Len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys(), 1)
-		at.Len(e1.c.store, 1)
+		requireEquals(t, len(e1.scopes), 1)
+		requireEquals(t, len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys()), 1)
+		requireEquals(t, len(e1.c.store), 1)
 
 		e2.tearDown()
-		at.Len(e1.scopes, 0)
-		at.Len(e1.c.store, 0)
+		requireEquals(t, len(e1.scopes), 0)
+		requireEquals(t, len(e1.c.store), 0)
 	})
 
 	t.Run("tearDown on unexisted scope", func(t *testing.T) {
-		at := assert.New(t)
 		tMock := &internal.TestMock{TestName: "mock"}
 		// defer tMock.callCleanups. e.tearDown will call directly for test
 		e := newTestEnv(tMock)
@@ -597,13 +564,11 @@ func Test_Env_TearDown(t *testing.T) {
 
 		runUntilFatal(e.tearDown)
 
-		at.Len(tMock.Fatals, 1)
+		requireEquals(t, len(tMock.Fatals), 1)
 	})
 }
 
 func Test_MakeCacheKey(t *testing.T) {
-	at := assert.New(t)
-
 	var res cacheKey
 	var err error
 
@@ -615,23 +580,21 @@ func Test_MakeCacheKey(t *testing.T) {
 		privateEnvFunc()
 	}
 	publicEnvFunc() // external caller
-	at.NoError(err)
+	noError(t, err)
 
 	expected := cacheKey(`{"func":"github.com/rekby/fixenv.Test_MakeCacheKey","fname":".../env_test.go","scope":0,"scope_name":"asdf","params":222}`)
-	at.JSONEq(string(expected), string(res))
+	requireJSONEquals(t, string(expected), string(res))
 }
 
 func Test_MakeCacheKeyFromFrame(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		at := assert.New(t)
-
 		key, err := makeCacheKeyFromFrame(123, ScopeTest, runtime.Frame{
 			PC:       0,
 			Function: "func_name",
 			File:     "/asd/file_name.go",
 		}, "scope-name", false)
-		at.NoError(err)
-		at.JSONEq(`{
+		noError(t, err)
+		requireJSONEquals(t, `{
 	"scope": 0,
 	"scope_name": "scope-name",
 	"func": "func_name",
@@ -641,15 +604,13 @@ func Test_MakeCacheKeyFromFrame(t *testing.T) {
 	})
 
 	t.Run("test_call", func(t *testing.T) {
-		at := assert.New(t)
-
 		key, err := makeCacheKeyFromFrame(123, ScopeTest, runtime.Frame{
 			PC:       0,
 			Function: "func_name",
 			File:     "/asd/file_name.go",
 		}, "scope-name", true)
-		at.NoError(err)
-		at.JSONEq(`{
+		noError(t, err)
+		requireJSONEquals(t, `{
 	"scope": 0,
 	"scope_name": "scope-name",
 	"func": "func_name",
@@ -659,30 +620,24 @@ func Test_MakeCacheKeyFromFrame(t *testing.T) {
 	})
 
 	t.Run("no_func_name", func(t *testing.T) {
-		at := assert.New(t)
-
 		_, err := makeCacheKeyFromFrame(123, ScopeTest, runtime.Frame{
 			PC:       0,
 			Function: "",
 			File:     "/asd/file_name.go",
 		}, "scope-name", true)
-		at.Error(err)
+		isError(t, err)
 	})
 
 	t.Run("no_file_name", func(t *testing.T) {
-		at := assert.New(t)
-
 		_, err := makeCacheKeyFromFrame(123, ScopeTest, runtime.Frame{
 			PC:       0,
 			Function: "func_name",
 			File:     "",
 		}, "scope-name", true)
-		at.Error(err)
+		isError(t, err)
 	})
 
 	t.Run("not_serializable_param", func(t *testing.T) {
-		at := assert.New(t)
-
 		type TStruct struct {
 			F func()
 		}
@@ -692,7 +647,7 @@ func Test_MakeCacheKeyFromFrame(t *testing.T) {
 			Function: "func_name",
 			File:     "/asd/file_name.go",
 		}, "scope-name", true)
-		at.Error(err)
+		isError(t, err)
 	})
 }
 
@@ -732,15 +687,13 @@ func Test_ScopeName(t *testing.T) {
 
 		for _, c := range table {
 			t.Run(c.name, func(t *testing.T) {
-				at := assert.New(t)
-				at.Equal(c.result, makeScopeName(c.testName, c.scope))
+				requireEquals(t, c.result, makeScopeName(c.testName, c.scope))
 			})
 		}
 	})
 
 	t.Run("unexpected_scope", func(t *testing.T) {
-		at := assert.New(t)
-		at.Panics(func() {
+		requirePanic(t, func() {
 			makeScopeName("asd", -1)
 		})
 	})
