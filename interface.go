@@ -87,10 +87,6 @@ type FixtureOptions struct {
 	Scope CacheScope
 
 	additionlSkipExternalCalls int
-
-	// cleanupFunc if not nil - called for cleanup fixture results
-	// internal implementation details
-	cleanupFunc FixtureCleanupFunc
 }
 
 // FixtureFunction - callback function with structured result
