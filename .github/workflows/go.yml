@@ -30,12 +30,14 @@ jobs:
       run: go build -v ./...
 
     - name: Build examples
+      if: ${{ matrix.goVersion == env.GO_VERSION }}
       run: cd examples; go build -v ./...
 
     - name: Test
       run: go test ./...
 
     - name: Test examples
+      if: ${{ matrix.goVersion == env.GO_VERSION }}
       run: cd examples; go test ./...
 
     - name: Test library with coverage profiler
