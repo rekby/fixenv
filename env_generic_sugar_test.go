@@ -6,11 +6,8 @@ package fixenv
 import (
 	"fmt"
 	"github.com/rekby/fixenv/internal"
-	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestCacheGeneric(t *testing.T) {
@@ -21,8 +18,8 @@ func TestCacheGeneric(t *testing.T) {
 		env := envMock{
 			onCacheResult: func(opts CacheOptions, f FixtureFunction) interface{} {
 				opts.additionlSkipExternalCalls--
-				require.Equal(t, inParams, opts.CacheKey)
-				require.Equal(t, inOpt.Scope, opts.Scope)
+				requireEquals(t, inParams, opts.CacheKey)
+				requireEquals(t, inOpt.Scope, opts.Scope)
 				res, _ := f()
 				return res.Value
 			},
@@ -31,7 +28,7 @@ func TestCacheGeneric(t *testing.T) {
 		res := Cache(env, inParams, inOpt, func() (int, error) {
 			return 2, nil
 		})
-		require.Equal(t, 2, res)
+		requireEquals(t, 2, res)
 	})
 	t.Run("SkipAdditionalCache", func(t *testing.T) {
 		test := &internal.TestMock{TestName: t.Name()}
@@ -48,8 +45,8 @@ func TestCacheGeneric(t *testing.T) {
 			})
 		}
 
-		require.Equal(t, 1, f1())
-		require.Equal(t, 2, f2())
+		requireEquals(t, 1, f1())
+		requireEquals(t, 2, f2())
 	})
 }
 
@@ -62,8 +59,8 @@ func TestCacheWithCleanupGeneric(t *testing.T) {
 
 		env := envMock{
 			onCacheResult: func(opts CacheOptions, f FixtureFunction) interface{} {
-				require.Equal(t, inParams, opts.CacheKey)
-				require.Equal(t, inOpt.Scope, opts.Scope)
+				requireEquals(t, inParams, opts.CacheKey)
+				requireEquals(t, inOpt.Scope, opts.Scope)
 				res, _ := f()
 				return res.Value
 			},
@@ -75,7 +72,7 @@ func TestCacheWithCleanupGeneric(t *testing.T) {
 			}
 			return 2, cleanup, nil
 		})
-		require.Equal(t, 2, res)
+		requireEquals(t, 2, res)
 	})
 	t.Run("SkipAdditionalCache", func(t *testing.T) {
 		test := &internal.TestMock{TestName: t.Name()}
@@ -92,8 +89,8 @@ func TestCacheWithCleanupGeneric(t *testing.T) {
 			})
 		}
 
-		require.Equal(t, 1, f1())
-		require.Equal(t, 2, f2())
+		requireEquals(t, 1, f1())
+		requireEquals(t, 2, f2())
 	})
 }
 
@@ -108,7 +105,7 @@ func TestCacheResultGeneric(t *testing.T) {
 
 		env := envMock{onCacheResult: func(opt CacheOptions, f FixtureFunction) interface{} {
 			opt.additionlSkipExternalCalls--
-			require.Equal(t, inOpt, opt)
+			requireEquals(t, inOpt, opt)
 			res, _ := f()
 			return res.Value
 		}}
@@ -120,7 +117,7 @@ func TestCacheResultGeneric(t *testing.T) {
 			return NewGenericResultWithCleanup(2, cleanup), nil
 		}
 		res := CacheResult(env, f, inOpt)
-		require.Equal(t, 2, res)
+		requireEquals(t, 2, res)
 	})
 	t.Run("SkipAdditionalCache", func(t *testing.T) {
 		test := &internal.TestMock{TestName: t.Name()}
@@ -137,14 +134,13 @@ func TestCacheResultGeneric(t *testing.T) {
 			})
 		}
 
-		require.Equal(t, 1, f1())
-		require.Equal(t, 2, f2())
+		requireEquals(t, 1, f1())
+		requireEquals(t, 2, f2())
 	})
 }
 
 func TestCacheResultPanic(t *testing.T) {
 	t.Run("Simple", func(t *testing.T) {
-		at := assert.New(t)
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := New(tMock)
 
@@ -156,10 +152,9 @@ func TestCacheResultPanic(t *testing.T) {
 		first := rndFix(e)
 		second := rndFix(e)
 
-		at.Equal(first, second)
+		requireEquals(t, first, second)
 	})
 	t.Run("Options", func(t *testing.T) {
-		at := assert.New(t)
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := New(tMock)
 
@@ -173,12 +168,11 @@ func TestCacheResultPanic(t *testing.T) {
 		second1 := rndFix(e, "second")
 		second2 := rndFix(e, "second")
 
-		at.Equal(first1, first2)
-		at.Equal(second1, second2)
-		at.NotEqual(first1, second1)
+		requireEquals(t, first1, first2)
+		requireEquals(t, second1, second2)
+		requireNotEquals(t, first1, second1)
 	})
 	t.Run("Panic", func(t *testing.T) {
-		at := assert.New(t)
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := New(tMock)
 
@@ -187,7 +181,7 @@ func TestCacheResultPanic(t *testing.T) {
 				return NewGenericResult(rand.Int()), nil
 			}, CacheOptions{CacheKey: name}, CacheOptions{CacheKey: name})
 		}
-		at.Panics(func() {
+		requirePanic(t, func() {
 			rndFix(e, "first")
 		})
 	})
