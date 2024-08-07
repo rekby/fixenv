@@ -18,7 +18,7 @@ func testServer(e fixenv.Env, response string) *httptest.Server {
 	f := func() (*fixenv.Result, error) {
 		resp := []byte(response)
 
-		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 			_, _ = writer.Write(resp)
 		}))
 		e.T().(testing.TB).Logf("Http server start. %q url: %q", response, server.URL)
