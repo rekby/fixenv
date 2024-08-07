@@ -583,7 +583,7 @@ func Test_MakeCacheKey(t *testing.T) {
 	noError(t, err)
 
 	expected := cacheKey(`{"func":"github.com/rekby/fixenv.Test_MakeCacheKey","fname":".../env_test.go","scope":0,"scope_name":"asdf","params":222}`)
-	requireJsonEquals(t, string(expected), string(res))
+	requireJSONEquals(t, string(expected), string(res))
 }
 
 func Test_MakeCacheKeyFromFrame(t *testing.T) {
@@ -594,7 +594,7 @@ func Test_MakeCacheKeyFromFrame(t *testing.T) {
 			File:     "/asd/file_name.go",
 		}, "scope-name", false)
 		noError(t, err)
-		requireJsonEquals(t, `{
+		requireJSONEquals(t, `{
 	"scope": 0,
 	"scope_name": "scope-name",
 	"func": "func_name",
@@ -610,7 +610,7 @@ func Test_MakeCacheKeyFromFrame(t *testing.T) {
 			File:     "/asd/file_name.go",
 		}, "scope-name", true)
 		noError(t, err)
-		requireJsonEquals(t, `{
+		requireJSONEquals(t, `{
 	"scope": 0,
 	"scope_name": "scope-name",
 	"func": "func_name",

@@ -83,14 +83,14 @@ func requireContains(t *testing.T, s, substr string) {
 func requirePanic(t *testing.T, f func()) {
 	t.Helper()
 	defer func() {
-		recover()
+		_ = recover()
 	}()
 
 	f()
 	t.Fatal("the function must raise panic")
 }
 
-func requireJsonEquals(t *testing.T, v1 string, v2 string) {
+func requireJSONEquals(t *testing.T, v1 string, v2 string) {
 	t.Helper()
 	var vj1 interface{}
 	var vj2 interface{}
