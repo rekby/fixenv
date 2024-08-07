@@ -14,7 +14,7 @@ type cache struct {
 type cacheKey string
 
 type cacheVal struct {
-	res interface{}
+	res *Result
 	err error
 }
 
@@ -28,7 +28,7 @@ func newCache() *cache {
 // GetOrSet atomic get exist values from cache or call f for set new value and return it.
 // it has guarantee about only one f will execute same time for the key.
 // but many f may execute simultaneously for different keys
-func (c *cache) GetOrSet(key cacheKey, f FixtureCallbackFunc) (interface{}, error) {
+func (c *cache) GetOrSet(key cacheKey, f FixtureFunction) (*Result, error) {
 	res, ok := c.get(key)
 	if ok {
 		return res.res, res.err
@@ -57,7 +57,7 @@ func (c *cache) get(key cacheKey) (cacheVal, bool) {
 	return val, ok
 }
 
-func (c *cache) setOnce(key cacheKey, f FixtureCallbackFunc) {
+func (c *cache) setOnce(key cacheKey, f FixtureFunction) {
 	c.m.Lock()
 	setOnce := c.setLocks[key]
 	if setOnce == nil {
@@ -68,7 +68,7 @@ func (c *cache) setOnce(key cacheKey, f FixtureCallbackFunc) {
 
 	setOnce.Do(func() {
 		var err = errors.New("unexpected exit from function")
-		var res interface{}
+		var res *Result
 
 		// save result must be deferred because f() may stop goroutine without result
 		// for example by panic or GoExit

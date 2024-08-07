@@ -413,15 +413,15 @@ func Test_FixtureWrapper(t *testing.T) {
 		key := cacheKey("asd")
 
 		cnt := 0
-		w := e.fixtureCallWrapper(key, func() (res interface{}, err error) {
+		w := e.fixtureCallWrapper(key, func() (res *Result, err error) {
 			cnt++
-			return cnt, errors.New("test")
-		}, &FixtureOptions{})
+			return NewResult(cnt), errors.New("test")
+		}, CacheOptions{})
 		si := e.scopes[makeScopeName(tMock.Name(), ScopeTest)]
 		at.Equal(0, cnt)
 		at.Len(si.cacheKeys, 0)
 		res1, err := w()
-		at.Equal(1, res1)
+		at.Equal(1, res1.Value)
 		at.EqualError(err, "test")
 		at.Equal(1, cnt)
 		at.Equal([]cacheKey{key}, si.cacheKeys)
@@ -429,12 +429,11 @@ func Test_FixtureWrapper(t *testing.T) {
 		cnt = 0
 		key2 := cacheKey("asd")
 		cleanupsLen := len(tMock.Cleanups)
-		w = e.fixtureCallWrapper(key2, func() (res interface{}, err error) {
+		w = e.fixtureCallWrapper(key2, func() (res *Result, err error) {
 			cnt++
-			return cnt, nil
-		}, &FixtureOptions{cleanupFunc: func() {
-
-		}})
+			cleanup := func() {}
+			return NewResultWithCleanup(cnt, cleanup), nil
+		}, CacheOptions{})
 		at.Len(tMock.Cleanups, cleanupsLen)
 		_, _ = w()
 		at.Equal([]cacheKey{key, key2}, si.cacheKeys)
@@ -449,9 +448,9 @@ func Test_FixtureWrapper(t *testing.T) {
 		e := newTestEnv(tMock)
 
 		tMock.TestName = "mock2"
-		w := e.fixtureCallWrapper("asd", func() (res interface{}, err error) {
-			return nil, nil
-		}, &FixtureOptions{})
+		w := e.fixtureCallWrapper("asd", func() (res *Result, err error) {
+			return NewResult(nil), nil
+		}, CacheOptions{})
 		runUntilFatal(func() {
 			_, _ = w()
 		})
@@ -609,7 +608,7 @@ func Test_MakeCacheKey(t *testing.T) {
 	var err error
 
 	privateEnvFunc := func() {
-		res, err = makeCacheKey("asdf", 222, globalEmptyFixtureOptions, true)
+		res, err = makeCacheKey("asdf", CacheOptions{CacheKey: 222}, true)
 	}
 
 	publicEnvFunc := func() {
