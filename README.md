@@ -6,7 +6,7 @@
 Go Fixtures
 ===========
 
-Inspired by pytest fixtures.
+Inspired by pytest fixtures. No dependencies.
 
 [Examples](https://github.com/rekby/fixenv/tree/master/examples)
 
