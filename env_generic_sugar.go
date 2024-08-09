@@ -5,43 +5,6 @@ package fixenv
 
 import "fmt"
 
-// Cache is call f once per cache scope (default per test) and cache result (success or error).
-// All other calls of the f will return same result
-// Deprecated: Use CacheResult
-func Cache[TRes any](env Env, cacheKey any, opt *FixtureOptions, f func() (TRes, error)) TRes {
-	addSkipLevel(&opt)
-
-	res := CacheResult(env, func() (*GenericResult[TRes], error) {
-		fRes, err := f()
-		return NewGenericResult(fRes), err
-	}, CacheOptions{
-		Scope:                      opt.Scope,
-		CacheKey:                   cacheKey,
-		additionlSkipExternalCalls: opt.additionlSkipExternalCalls,
-	})
-
-	return res
-}
-
-// CacheWithCleanup is call f once per cache scope (default per test) and cache result (success or error).
-// All other calls of the f will return same result.
-// Used when fixture need own cleanup after exit from test scope
-// Deprecated: Use CacheResult
-func CacheWithCleanup[TRes any](env Env, cacheKey any, opt *FixtureOptions, f func() (TRes, FixtureCleanupFunc, error)) TRes {
-	addSkipLevel(&opt)
-
-	res := CacheResult(env, func() (*GenericResult[TRes], error) {
-		res, cleanup, err := f()
-		return NewGenericResultWithCleanup(res, cleanup), err
-	}, CacheOptions{
-		Scope:                      opt.Scope,
-		CacheKey:                   cacheKey,
-		additionlSkipExternalCalls: opt.additionlSkipExternalCalls,
-	})
-
-	return res
-}
-
 // CacheResult is call f once per cache scope (default per test) and cache result (success or error).
 // All other calls of the f will return same result.
 func CacheResult[TRes any](env Env, f GenericFixtureFunction[TRes], options ...CacheOptions) TRes {
@@ -89,13 +52,6 @@ func NewGenericResult[ResT any](res ResT) *GenericResult[ResT] {
 
 func NewGenericResultWithCleanup[ResT any](res ResT, cleanup FixtureCleanupFunc) *GenericResult[ResT] {
 	return &GenericResult[ResT]{Value: res, ResultAdditional: ResultAdditional{Cleanup: cleanup}}
-}
-
-func addSkipLevel(optspp **FixtureOptions) {
-	if *optspp == nil {
-		*optspp = &FixtureOptions{}
-	}
-	(*optspp).additionlSkipExternalCalls++
 }
 
 func addSkipLevelCache(optspp *CacheOptions) {
