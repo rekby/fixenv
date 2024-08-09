@@ -50,12 +50,6 @@ func New(t T) *EnvT {
 	return env
 }
 
-// NewEnv create EnvT from test
-// Deprecated: use New instead
-func NewEnv(t T) *EnvT {
-	return New(t)
-}
-
 func newEnv(t T, c *cache, m sync.Locker, scopes map[string]*scopeInfo) *EnvT {
 	return &EnvT{
 		t:      t,
@@ -68,69 +62,6 @@ func newEnv(t T, c *cache, m sync.Locker, scopes map[string]*scopeInfo) *EnvT {
 // T return test from EnvT created
 func (e *EnvT) T() T {
 	return e.t
-}
-
-// Cache call from fixture and manage call f and cache it.
-// Cache must be called direct from fixture - it use runtime stacktrace for
-// detect called method - it is part of cache key.
-// params - part of cache key. Usually - parameters, passed to fixture.
-//
-//	it allow use parametrized fixtures with different results.
-//	params must be json serializable.
-//
-// opt - fixture options, nil for default options.
-// f - callback - fixture body.
-// Cache guarantee for call f exactly once for same Cache called and params combination.
-// Deprecated: will be removed in next versions.
-// Use EnvT.CacheResult instead
-func (e *EnvT) Cache(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{} {
-	if opt == nil {
-		opt = &FixtureOptions{}
-	}
-	var fixtureFunc FixtureFunction = func() (*Result, error) {
-		res, err := f()
-		return NewResult(res), err
-	}
-
-	options := CacheOptions{
-		Scope:                      opt.Scope,
-		CacheKey:                   cacheKey,
-		additionlSkipExternalCalls: opt.additionlSkipExternalCalls,
-	}
-	return e.cache(fixtureFunc, options)
-}
-
-// CacheWithCleanup call from fixture and manage call f and cache it.
-// CacheWithCleanup must be called direct from fixture - it use runtime stacktrace for
-// detect called method - it is part of cache key.
-// params - part of cache key. Usually - parameters, passed to fixture.
-//
-//	it allow use parametrized fixtures with different results.
-//	params must be json serializable.
-//
-// opt - fixture options, nil for default options.
-// f - callback - fixture body.
-// cleanup, returned from f called while fixture cleanup
-// Cache guarantee for call f exactly once for same Cache called and params combination.
-// Deprecated: will be removed in next versions.
-// Use EnvT.CacheResult instead
-func (e *EnvT) CacheWithCleanup(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{} {
-	if opt == nil {
-		opt = &FixtureOptions{}
-	}
-
-	var fixtureFunc FixtureFunction = func() (*Result, error) {
-		res, resCleanupFunc, err := f()
-		return NewResultWithCleanup(res, resCleanupFunc), err
-	}
-
-	options := CacheOptions{
-		Scope:                      opt.Scope,
-		CacheKey:                   cacheKey,
-		additionlSkipExternalCalls: opt.additionlSkipExternalCalls,
-	}
-
-	return e.cache(fixtureFunc, options)
 }
 
 // CacheResult call f callback once and cache result (ok and error),

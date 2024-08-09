@@ -47,13 +47,11 @@ func TestCounter(t *testing.T) {
 // counterTestAndSubtest increment counter every non cached call
 // and cache result for top level test and all of subtests
 func counterTestAndSubtest(e fixenv.Env) int {
-	return fixenv.Cache(e, "", &fixenv.FixtureOptions{
-		Scope: fixenv.ScopeTestAndSubtests,
-	}, func() (res int, err error) {
+	return fixenv.CacheResult(e, func() (*fixenv.GenericResult[int], error) {
 		globalTestAndSubtestCounter++
 		e.T().Logf("increment globalTestAndSubtestCounter to: ")
-		return globalTestAndSubtestCounter, nil
-	})
+		return fixenv.NewGenericResult(globalTestAndSubtestCounter), nil
+	}, fixenv.CacheOptions{Scope: fixenv.ScopeTestAndSubtests})
 }
 
 func TestTestAndSubtestCounter(t *testing.T) {

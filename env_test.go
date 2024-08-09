@@ -66,222 +66,6 @@ func Test_Env__NewEnv(t *testing.T) {
 	})
 }
 
-func testFailedFixture(env Env) {
-	env.CacheResult(func() (*Result, error) {
-		return nil, errors.New("test error")
-	})
-}
-
-func Test_Env_Cache(t *testing.T) {
-	t.Run("simple", func(t *testing.T) {
-		e := New(t)
-
-		val := 0
-		cntF := func() int {
-			res := e.Cache(nil, nil, func() (res interface{}, err error) {
-				val++
-				e.T().Logf("val: ", val)
-				return val, nil
-			})
-			return res.(int)
-		}
-
-		requireEquals(t, 1, cntF())
-		requireEquals(t, 1, cntF())
-
-		val = 2
-		requireEquals(t, 1, cntF())
-	})
-
-	t.Run("subtest_and_test_scope", func(t *testing.T) {
-		e := New(t)
-
-		val := 0
-		cntF := func(env Env) int {
-			res := env.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
-				val++
-				return val, nil
-			})
-			return res.(int)
-		}
-
-		requireEquals(t, 1, cntF(e))
-		requireEquals(t, 1, cntF(e))
-
-		t.Run("subtest", func(t *testing.T) {
-			subEnv := New(t)
-			requireEquals(t, 2, cntF(subEnv))
-			requireEquals(t, 2, cntF(subEnv))
-		})
-
-		requireEquals(t, 1, cntF(e))
-
-	})
-
-	t.Run("subtest_and_package_scope", func(t *testing.T) {
-		e := New(t)
-		_, mainClose := CreateMainTestEnv(nil)
-		defer mainClose()
-
-		val := 0
-		cntF := func(env Env) int {
-			res := env.Cache(nil, &FixtureOptions{Scope: ScopePackage}, func() (res interface{}, err error) {
-				val++
-				return val, nil
-			})
-			return res.(int)
-		}
-
-		requireEquals(t, 1, cntF(e))
-		requireEquals(t, 1, cntF(e))
-
-		t.Run("subtest", func(t *testing.T) {
-			subEnv := New(t)
-			requireEquals(t, 1, cntF(subEnv))
-			requireEquals(t, 1, cntF(subEnv))
-		})
-
-		requireEquals(t, 1, cntF(e))
-
-	})
-
-	t.Run("fail_on_fixture_err", func(t *testing.T) {
-		tMock := &internal.TestMock{TestName: "mock"}
-		defer tMock.CallCleanup()
-
-		e := newTestEnv(tMock)
-		requireEquals(t, len(tMock.Fatals), 0)
-
-		runUntilFatal(func() {
-			testFailedFixture(e)
-		})
-		requireEquals(t, len(tMock.Fatals), 1)
-
-		// log message contains fixture name
-		requireContains(t, tMock.Fatals[0].ResultString, "testFailedFixture")
-	})
-
-	t.Run("not_serializable_param", func(t *testing.T) {
-		type paramT struct {
-			F func() // can't serialize func to json
-		}
-		param := paramT{}
-		tMock := &internal.TestMock{TestName: "mock"}
-		defer tMock.CallCleanup()
-		e := newTestEnv(tMock)
-		runUntilFatal(func() {
-			e.Cache(param, nil, func() (res interface{}, err error) {
-				return nil, nil
-			})
-		})
-		requireEquals(t, len(tMock.Fatals), 1)
-	})
-
-	t.Run("cache_by_caller_func", func(t *testing.T) {
-		tMock := &internal.TestMock{TestName: "mock"}
-		e := newTestEnv(tMock)
-
-		cnt := 0
-		res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
-			cnt++
-			return cnt, nil
-		})
-		requireEquals(t, 1, res)
-
-		res = e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
-			cnt++
-			return cnt, nil
-		})
-		requireEquals(t, 1, res)
-	})
-
-	t.Run("different_cache_for_diff_anonim_function", func(t *testing.T) {
-		tMock := &internal.TestMock{TestName: "mock"}
-		e := newTestEnv(tMock)
-
-		cnt := 0
-		func() {
-			res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
-				cnt++
-				return cnt, nil
-			})
-			requireEquals(t, 1, res)
-		}()
-
-		func() {
-			res := e.Cache(nil, &FixtureOptions{Scope: ScopeTest}, func() (res interface{}, err error) {
-				cnt++
-				return cnt, nil
-			})
-			requireEquals(t, 2, res)
-		}()
-
-	})
-
-	t.Run("check_unreachable_code", func(t *testing.T) {
-		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
-		e := New(tMock)
-		requirePanic(t, func() {
-			e.Cache(nil, nil, func() (res interface{}, err error) {
-				return nil, ErrSkipTest
-			})
-		})
-		requireEquals(t, 1, tMock.SkipCount)
-	})
-}
-
-func Test_Env_CacheWithCleanup(t *testing.T) {
-	t.Run("NilCleanup", func(t *testing.T) {
-		tMock := &internal.TestMock{TestName: t.Name()}
-		env := newTestEnv(tMock)
-
-		callbackCalled := 0
-		var callbackFunc FixtureCallbackWithCleanupFunc = func() (res interface{}, cleanup FixtureCleanupFunc, err error) {
-			callbackCalled++
-			return callbackCalled, nil, nil
-		}
-
-		res := env.CacheWithCleanup(nil, nil, callbackFunc)
-		requireEquals(t, 1, res)
-		requireEquals(t, 1, callbackCalled)
-
-		// got value from cache
-		res = env.CacheWithCleanup(nil, nil, callbackFunc)
-		requireEquals(t, 1, res)
-		requireEquals(t, 1, callbackCalled)
-	})
-
-	t.Run("WithCleanup", func(t *testing.T) {
-		tMock := &internal.TestMock{TestName: t.Name()}
-		env := newTestEnv(tMock)
-
-		callbackCalled := 0
-		cleanupCalled := 0
-		var callbackFunc FixtureCallbackWithCleanupFunc = func() (res interface{}, cleanup FixtureCleanupFunc, err error) {
-			callbackCalled++
-			cleanup = func() {
-				cleanupCalled++
-			}
-			return callbackCalled, cleanup, nil
-		}
-
-		res := env.CacheWithCleanup(nil, nil, callbackFunc)
-		requireEquals(t, 1, res)
-		requireEquals(t, 1, callbackCalled)
-		requireEquals(t, cleanupCalled, 0)
-
-		// got value from cache
-		res = env.CacheWithCleanup(nil, nil, callbackFunc)
-		requireEquals(t, 1, res)
-		requireEquals(t, 1, callbackCalled)
-		requireEquals(t, cleanupCalled, 0)
-
-		tMock.CallCleanup()
-		requireEquals(t, 1, callbackCalled)
-		requireEquals(t, 1, cleanupCalled)
-	})
-}
-
 func Test_Env_CacheResult(t *testing.T) {
 	t.Run("Simple", func(t *testing.T) {
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
@@ -375,6 +159,24 @@ func Test_Env_CacheResult(t *testing.T) {
 		}()
 		<-done
 		requireEquals(t, 1, len(tMock.Fatals))
+	})
+	t.Run("check_unserializable_params", func(t *testing.T) {
+		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
+		e := newTestEnv(tMock)
+		e.CacheResult(func() (*Result, error) {
+			return nil, ErrSkipTest
+		}, CacheOptions{CacheKey: func() {}})
+		requireEquals(t, len(tMock.Fatals), 1)
+	})
+	t.Run("check_unreachable_code", func(t *testing.T) {
+		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
+		e := newTestEnv(tMock)
+		requirePanic(t, func() {
+			e.CacheResult(func() (*Result, error) {
+				return nil, ErrSkipTest
+			})
+		})
+		requireEquals(t, 1, tMock.SkipCount)
 	})
 }
 
@@ -697,17 +499,6 @@ func Test_ScopeName(t *testing.T) {
 			makeScopeName("asd", -1)
 		})
 	})
-}
-
-func TestNewEnv(t *testing.T) {
-	tm := &internal.TestMock{}
-	tm.SkipGoexit = true
-	New(tm)
-
-	NewEnv(tm)
-	if len(tm.Fatals) == 0 {
-		t.Fatal("bad double login between new and NewEnv")
-	}
 }
 
 func runUntilFatal(f func()) {

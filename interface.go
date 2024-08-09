@@ -16,20 +16,6 @@ type Env interface {
 	// CacheResult add result of call f to cache and return same result for all
 	// calls for the same function and cache options within cache scope
 	CacheResult(f FixtureFunction, options ...CacheOptions) interface{}
-
-	// Cache result of f calls
-	// f call exactly once for every combination of scope and params
-	// params must be json serializable (deserialize not need)
-	// Deprecated: will be removed in next versions
-	// Use Env.CacheResult instead.
-	Cache(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackFunc) interface{}
-
-	// CacheWithCleanup cache result of f calls
-	// f call exactly once for every combination of scope and params
-	// params must be json serializable (deserialize not need)
-	// Deprecated: will be removed in next versions
-	// Use Env.CacheResult instead.
-	CacheWithCleanup(cacheKey interface{}, opt *FixtureOptions, f FixtureCallbackWithCleanupFunc) interface{}
 }
 
 var (
@@ -60,34 +46,10 @@ const (
 	ScopeTestAndSubtests
 )
 
-// FixtureCallbackFunc - function, which result can cached
-// res - result for cache.
-// if err not nil - T().Fatalf() will called with error message
-// if res exit without return (panic, GoExit, t.FailNow, ...)
-// then cache error about unexpected exit
-type FixtureCallbackFunc func() (res interface{}, err error)
-
-// FixtureCallbackWithCleanupFunc - function, which result can cached
-// res - result for cache.
-// cleanup - if not nil - call on fixture cleanup. It called exactly once for every successfully call fixture
-// if err not nil - T().Fatalf() will called with error message
-// if res exit without return (panic, GoExit, t.FailNow, ...)
-// then cache error about unexpected exit
-type FixtureCallbackWithCleanupFunc func() (res interface{}, cleanup FixtureCleanupFunc, err error)
-
 // FixtureCleanupFunc - callback function for cleanup after
 // fixture value out from lifetime scope
 // it called exactly once for every succesully call fixture
 type FixtureCleanupFunc func()
-
-// FixtureOptions options for fixenv engine
-// for custom manage fixture
-type FixtureOptions struct {
-	// Scope for cache result
-	Scope CacheScope
-
-	additionlSkipExternalCalls int
-}
 
 // FixtureFunction - callback function with structured result
 // the function can return ErrSkipTest error for skip the test

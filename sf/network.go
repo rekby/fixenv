@@ -25,11 +25,14 @@ func LocalTCPListener(e fixenv.Env) *net.TCPListener {
 }
 
 func LocalTCPListenerNamed(e fixenv.Env, name string) *net.TCPListener {
-	return e.CacheWithCleanup(name, nil, func() (res interface{}, cleanup fixenv.FixtureCleanupFunc, err error) {
+	f := func() (*fixenv.Result, error) {
 		listener, err := net.Listen("tcp", "localhost:0")
 		clean := func() {
-			_ = listener.Close()
+			if listener != nil {
+				_ = listener.Close()
+			}
 		}
-		return listener, clean, err
-	}).(*net.TCPListener)
+		return fixenv.NewResultWithCleanup(listener, clean), err
+	}
+	return e.CacheResult(f, fixenv.CacheOptions{CacheKey: name}).(*net.TCPListener)
 }
