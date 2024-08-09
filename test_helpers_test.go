@@ -3,7 +3,6 @@ package fixenv
 import (
 	"encoding/json"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -70,13 +69,6 @@ func requireNotNil(t *testing.T, v interface{}) {
 	val := reflect.ValueOf(v)
 	if val.IsNil() {
 		t.Fatal("Must be not nil")
-	}
-}
-
-func requireContains(t *testing.T, s, substr string) {
-	t.Helper()
-	if !strings.Contains(s, substr) {
-		t.Fatalf("'%s' must contains '%s'", s, substr)
 	}
 }
 
