@@ -50,12 +50,6 @@ func New(t T) *EnvT {
 	return env
 }
 
-// NewEnv create EnvT from test
-// Deprecated: use New instead
-func NewEnv(t T) *EnvT {
-	return New(t)
-}
-
 func newEnv(t T, c *cache, m sync.Locker, scopes map[string]*scopeInfo) *EnvT {
 	return &EnvT{
 		t:      t,

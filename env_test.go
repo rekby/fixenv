@@ -66,12 +66,6 @@ func Test_Env__NewEnv(t *testing.T) {
 	})
 }
 
-func testFailedFixture(env Env) {
-	env.CacheResult(func() (*Result, error) {
-		return nil, errors.New("test error")
-	})
-}
-
 func Test_Env_CacheResult(t *testing.T) {
 	t.Run("Simple", func(t *testing.T) {
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
@@ -165,6 +159,24 @@ func Test_Env_CacheResult(t *testing.T) {
 		}()
 		<-done
 		requireEquals(t, 1, len(tMock.Fatals))
+	})
+	t.Run("check_unserializable_params", func(t *testing.T) {
+		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
+		e := newTestEnv(tMock)
+		e.CacheResult(func() (*Result, error) {
+			return nil, ErrSkipTest
+		}, CacheOptions{CacheKey: func() {}})
+		requireEquals(t, len(tMock.Fatals), 1)
+	})
+	t.Run("check_unreachable_code", func(t *testing.T) {
+		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
+		e := newTestEnv(tMock)
+		requirePanic(t, func() {
+			e.CacheResult(func() (*Result, error) {
+				return nil, ErrSkipTest
+			})
+		})
+		requireEquals(t, 1, tMock.SkipCount)
 	})
 }
 
@@ -487,17 +499,6 @@ func Test_ScopeName(t *testing.T) {
 			makeScopeName("asd", -1)
 		})
 	})
-}
-
-func TestNewEnv(t *testing.T) {
-	tm := &internal.TestMock{}
-	tm.SkipGoexit = true
-	New(tm)
-
-	NewEnv(tm)
-	if len(tm.Fatals) == 0 {
-		t.Fatal("bad double login between new and NewEnv")
-	}
 }
 
 func runUntilFatal(f func()) {
