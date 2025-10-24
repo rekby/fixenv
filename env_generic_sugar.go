@@ -32,6 +32,10 @@ func CacheResult[TRes any](env Env, f GenericFixtureFunction[TRes], options ...C
 		return oldStyleRes, err
 	}
 	res := env.CacheResult(oldStyleFunc, cacheOptions)
+	if res == nil {
+		var zero TRes
+		return zero
+	}
 	return res.(TRes)
 }
 

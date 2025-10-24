@@ -53,6 +53,20 @@ func TestCacheResultGeneric(t *testing.T) {
 		requireEquals(t, 1, f1())
 		requireEquals(t, 2, f2())
 	})
+	t.Run("NilResultReturnsZeroValue", func(t *testing.T) {
+		tMock := &internal.TestMock{TestName: t.Name(), SkipGoexit: true}
+		env := New(tMock)
+		calls := 0
+		fixture := func() (*GenericResult[*int], error) {
+			calls++
+			return nil, nil
+		}
+		res1 := CacheResult(env, fixture)
+		res2 := CacheResult(env, fixture)
+		requireNil(t, res1)
+		requireNil(t, res2)
+		requireEquals(t, 1, calls)
+	})
 }
 
 func TestCacheResultPanic(t *testing.T) {
