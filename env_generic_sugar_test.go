@@ -19,7 +19,7 @@ func TestCacheResultGeneric(t *testing.T) {
 
 		cleanupCalledBack := 0
 
-		env := envMock{onCacheResult: func(opt CacheOptions, f FixtureFunction) interface{} {
+		env := envMock{onCacheResult: func(opt CacheOptions, f fixtureFunction) interface{} {
 			opt.additionlSkipExternalCalls--
 			requireEquals(t, inOpt, opt)
 			res, _ := f()
@@ -118,14 +118,14 @@ func TestCacheResultPanic(t *testing.T) {
 }
 
 type envMock struct {
-	onCacheResult func(opts CacheOptions, f FixtureFunction) interface{}
+	onCacheResult func(opts CacheOptions, f fixtureFunction) interface{}
 }
 
 func (e envMock) T() T {
 	panic("not implemented")
 }
 
-func (e envMock) CacheResult(f FixtureFunction, options ...CacheOptions) interface{} {
+func (e envMock) cacheResult(f fixtureFunction, options ...CacheOptions) interface{} {
 	var opts CacheOptions
 	switch len(options) {
 	case 0:

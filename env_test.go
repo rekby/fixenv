@@ -72,9 +72,9 @@ func Test_Env_CacheResult(t *testing.T) {
 		e := New(tMock)
 
 		rndFix := func(e Env) int {
-			return e.CacheResult(func() (*Result, error) {
-				return NewResult(rand.Int()), nil
-			}).(int)
+			return CacheResult(e, func() (*GenericResult[int], error) {
+				return NewGenericResult(rand.Int()), nil
+			})
 		}
 		first := rndFix(e)
 		second := rndFix(e)
@@ -86,9 +86,9 @@ func Test_Env_CacheResult(t *testing.T) {
 		e := New(tMock)
 
 		rndFix := func(e Env, name string) int {
-			return e.CacheResult(func() (*Result, error) {
-				return NewResult(rand.Int()), nil
-			}, CacheOptions{CacheKey: name}).(int)
+			return CacheResult(e, func() (*GenericResult[int], error) {
+				return NewGenericResult(rand.Int()), nil
+			}, CacheOptions{CacheKey: name})
 		}
 		first1 := rndFix(e, "first")
 		first2 := rndFix(e, "first")
@@ -105,21 +105,21 @@ func Test_Env_CacheResult(t *testing.T) {
 
 		callbackCalled := 0
 		cleanupCalled := 0
-		var callbackFunc FixtureFunction = func() (*Result, error) {
+		var callbackFunc fixtureFunction = func() (*result, error) {
 			callbackCalled++
 			cleanup := func() {
 				cleanupCalled++
 			}
-			return NewResultWithCleanup(callbackCalled, cleanup), nil
+			return newResultWithCleanup(callbackCalled, cleanup), nil
 		}
 
-		res := env.CacheResult(callbackFunc)
+		res := env.cacheResult(callbackFunc)
 		requireEquals(t, 1, res)
 		requireEquals(t, 1, callbackCalled)
 		requireEquals(t, cleanupCalled, 0)
 
 		// got value from cache
-		res = env.CacheResult(callbackFunc)
+		res = env.cacheResult(callbackFunc)
 		requireEquals(t, 1, res)
 		requireEquals(t, 1, callbackCalled)
 		requireEquals(t, cleanupCalled, 0)
@@ -133,9 +133,9 @@ func Test_Env_CacheResult(t *testing.T) {
 		e := New(tMock)
 
 		rndFix := func(e Env, name string) int {
-			return e.CacheResult(func() (*Result, error) {
-				return NewResult(rand.Int()), nil
-			}, CacheOptions{CacheKey: name}, CacheOptions{CacheKey: name}).(int)
+			return CacheResult(e, func() (*GenericResult[int], error) {
+				return NewGenericResult(rand.Int()), nil
+			}, CacheOptions{CacheKey: name}, CacheOptions{CacheKey: name})
 		}
 		requirePanic(t, func() {
 			rndFix(e, "first")
@@ -148,9 +148,9 @@ func Test_Env_CacheResult(t *testing.T) {
 		testErr := errors.New("test err")
 
 		failedFix := func(e Env) int {
-			return e.CacheResult(func() (*Result, error) {
+			return CacheResult(e, func() (*GenericResult[int], error) {
 				return nil, testErr
-			}).(int)
+			})
 		}
 		done := make(chan bool)
 		go func() {
@@ -163,7 +163,7 @@ func Test_Env_CacheResult(t *testing.T) {
 	t.Run("check_unserializable_params", func(t *testing.T) {
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := newTestEnv(tMock)
-		e.CacheResult(func() (*Result, error) {
+		CacheResult(e, func() (*GenericResult[int], error) {
 			return nil, ErrSkipTest
 		}, CacheOptions{CacheKey: func() {}})
 		requireEquals(t, len(tMock.Fatals), 1)
@@ -172,7 +172,7 @@ func Test_Env_CacheResult(t *testing.T) {
 		tMock := &internal.TestMock{TestName: "mock", SkipGoexit: true}
 		e := newTestEnv(tMock)
 		requirePanic(t, func() {
-			e.CacheResult(func() (*Result, error) {
+			CacheResult(e, func() (*GenericResult[int], error) {
 				return nil, ErrSkipTest
 			})
 		})
@@ -189,9 +189,9 @@ func Test_FixtureWrapper(t *testing.T) {
 		key := cacheKey("asd")
 
 		cnt := 0
-		w := e.fixtureCallWrapper(key, func() (res *Result, err error) {
+		w := e.fixtureCallWrapper(key, func() (res *result, err error) {
 			cnt++
-			return NewResult(cnt), errors.New("test")
+			return newResult(cnt), errors.New("test")
 		}, CacheOptions{})
 		si := e.scopes[makeScopeName(tMock.Name(), ScopeTest)]
 		requireEquals(t, 0, cnt)
@@ -205,10 +205,10 @@ func Test_FixtureWrapper(t *testing.T) {
 		cnt = 0
 		key2 := cacheKey("asd")
 		cleanupsLen := len(tMock.Cleanups)
-		w = e.fixtureCallWrapper(key2, func() (res *Result, err error) {
+		w = e.fixtureCallWrapper(key2, func() (res *result, err error) {
 			cnt++
 			cleanup := func() {}
-			return NewResultWithCleanup(cnt, cleanup), nil
+			return newResultWithCleanup(cnt, cleanup), nil
 		}, CacheOptions{})
 		requireEquals(t, len(tMock.Cleanups), cleanupsLen)
 		_, _ = w()
@@ -222,8 +222,8 @@ func Test_FixtureWrapper(t *testing.T) {
 		e := newTestEnv(tMock)
 
 		tMock.TestName = "mock2"
-		w := e.fixtureCallWrapper("asd", func() (res *Result, err error) {
-			return NewResult(nil), nil
+		w := e.fixtureCallWrapper("asd", func() (res *result, err error) {
+			return newResult(nil), nil
 		}, CacheOptions{})
 		runUntilFatal(func() {
 			_, _ = w()
@@ -241,11 +241,10 @@ func Test_Env_Skip(t *testing.T) {
 
 	skipFixtureCallTimes := 0
 	skipFixture := func() int {
-		res := tEnv.CacheResult(func() (*Result, error) {
+		return CacheResult(tEnv, func() (*GenericResult[int], error) {
 			skipFixtureCallTimes++
 			return nil, ErrSkipTest
 		})
-		return res.(int)
 	}
 
 	assertGoExit := func(callback func()) {
@@ -316,10 +315,10 @@ func Test_Env_TearDown(t *testing.T) {
 		requireEquals(t, len(e1.scopes[makeScopeName(t1.TestName, ScopeTest)].Keys()), 0)
 		requireEquals(t, len(e1.c.store), 0)
 
-		e1.CacheResult(func() (*Result, error) {
-			return NewResult(nil), nil
+		CacheResult(e1, func() (*GenericResult[any], error) {
+			return NewGenericResult[any](nil), nil
 		}, CacheOptions{CacheKey: 1})
-		e1.CacheResult(func() (*Result, error) {
+		CacheResult(e1, func() (*GenericResult[int], error) {
 			return nil, nil
 		}, CacheOptions{CacheKey: 2})
 		requireEquals(t, len(e1.scopes), 1)
@@ -335,7 +334,7 @@ func Test_Env_TearDown(t *testing.T) {
 		requireEquals(t, len(e1.scopes[makeScopeName(t2.TestName, ScopeTest)].Keys()), 0)
 		requireEquals(t, len(e1.c.store), 2)
 
-		e2.CacheResult(func() (*Result, error) {
+		CacheResult(e2, func() (*GenericResult[int], error) {
 			return nil, nil
 		}, CacheOptions{CacheKey: 1})
 

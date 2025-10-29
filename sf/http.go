@@ -6,9 +6,9 @@ import (
 )
 
 func HTTPServer(e fixenv.Env) *httptest.Server {
-	f := func() (*fixenv.Result, error) {
+	f := func() (*fixenv.GenericResult[*httptest.Server], error) {
 		server := httptest.NewServer(nil)
-		return fixenv.NewResultWithCleanup(server, server.Close), nil
+		return fixenv.NewGenericResultWithCleanup(server, server.Close), nil
 	}
-	return e.CacheResult(f).(*httptest.Server)
+	return fixenv.CacheResult(e, f)
 }

@@ -13,9 +13,7 @@ type Env interface {
 	// T - return t object of current test/benchmark.
 	T() T
 
-	// CacheResult add result of call f to cache and return same result for all
-	// calls for the same function and cache options within cache scope
-	CacheResult(f FixtureFunction, options ...CacheOptions) interface{}
+	cacheResult(f fixtureFunction, options ...CacheOptions) interface{}
 }
 
 var (
@@ -51,26 +49,24 @@ const (
 // it called exactly once for every succesully call fixture
 type FixtureCleanupFunc func()
 
-// FixtureFunction - callback function with structured result
-// the function can return ErrSkipTest error for skip the test
-type FixtureFunction func() (*Result, error)
-
-// Result of fixture callback
-type Result struct {
-	Value interface{}
-	ResultAdditional
-}
-
+// ResultAdditional contains metadata for both generic and legacy fixtures.
 type ResultAdditional struct {
 	Cleanup FixtureCleanupFunc
 }
 
-func NewResult(res interface{}) *Result {
-	return &Result{Value: res}
+type fixtureFunction func() (*result, error)
+
+type result struct {
+	Value interface{}
+	ResultAdditional
 }
 
-func NewResultWithCleanup(res interface{}, cleanup FixtureCleanupFunc) *Result {
-	return &Result{Value: res, ResultAdditional: ResultAdditional{Cleanup: cleanup}}
+func newResult(res interface{}) *result {
+	return &result{Value: res}
+}
+
+func newResultWithCleanup(res interface{}, cleanup FixtureCleanupFunc) *result {
+	return &result{Value: res, ResultAdditional: ResultAdditional{Cleanup: cleanup}}
 }
 
 type CacheOptions struct {
