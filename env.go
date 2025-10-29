@@ -64,11 +64,7 @@ func (e *EnvT) T() T {
 	return e.t
 }
 
-// CacheResult call f callback once and cache result (ok and error),
-// then return same result for all calls of the callback without additional calls
-// f with same options calls max once per test (or defined test scope)
-// See to generic wrapper: CacheResult
-func (e *EnvT) CacheResult(f FixtureFunction, options ...CacheOptions) interface{} {
+func (e *EnvT) cacheResult(f fixtureFunction, options ...CacheOptions) interface{} {
 	var cacheOptions CacheOptions
 	switch len(options) {
 	case 0:
@@ -85,7 +81,7 @@ func (e *EnvT) CacheResult(f FixtureFunction, options ...CacheOptions) interface
 
 // cache must be call from first-level public function
 // UserFunction->EnvFunction->cache for good determine caller name
-func (e *EnvT) cache(f FixtureFunction, options CacheOptions) interface{} {
+func (e *EnvT) cache(f fixtureFunction, options CacheOptions) interface{} {
 	key, err := makeCacheKey(e.t.Name(), options, false)
 	if err != nil {
 		e.t.Fatalf("failed to create cache key: %v", err)
@@ -210,8 +206,8 @@ func makeCacheKeyFromFrame(params interface{}, scope CacheScope, f runtime.Frame
 
 }
 
-func (e *EnvT) fixtureCallWrapper(key cacheKey, f FixtureFunction, options CacheOptions) FixtureFunction {
-	return func() (res *Result, err error) {
+func (e *EnvT) fixtureCallWrapper(key cacheKey, f fixtureFunction, options CacheOptions) fixtureFunction {
+	return func() (res *result, err error) {
 		scopeName := makeScopeName(e.t.Name(), options.Scope)
 
 		e.m.Lock()
@@ -233,7 +229,7 @@ func (e *EnvT) fixtureCallWrapper(key cacheKey, f FixtureFunction, options Cache
 
 		// force exactly least one of res, err != nil
 		if res == nil && err == nil {
-			res = NewResult(nil)
+			res = newResult(nil)
 		}
 		if res != nil && res.Cleanup != nil {
 			si.t.Cleanup(res.Cleanup)

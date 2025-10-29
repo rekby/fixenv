@@ -19,8 +19,8 @@ func TestCache_DeleteKeys(t *testing.T) {
 		k2 := cacheKey("k2")
 		k3 := cacheKey("k3")
 		val1 := "test1"
-		valFunc := func() (*Result, error) {
-			return NewResult(val1), nil
+		valFunc := func() (*result, error) {
+			return newResult(val1), nil
 		}
 
 		c.setOnce(k1, valFunc)
@@ -37,8 +37,8 @@ func TestCache_DeleteKeys(t *testing.T) {
 		requireEquals(t, val1, res.res.Value.(string))
 
 		val2 := "test2"
-		c.setOnce(k1, func() (res *Result, err error) {
-			return NewResult(val2), nil
+		c.setOnce(k1, func() (res *result, err error) {
+			return newResult(val2), nil
 		})
 		res, ok = c.get(k1)
 		requireTrue(t, ok)
@@ -47,8 +47,8 @@ func TestCache_DeleteKeys(t *testing.T) {
 
 	t.Run("mutex", func(t *testing.T) {
 		c := newCache()
-		c.setOnce("asd", func() (res *Result, err error) {
-			return NewResult(nil), nil
+		c.setOnce("asd", func() (res *result, err error) {
+			return newResult(nil), nil
 		})
 
 		c.m.RLock()
@@ -77,17 +77,17 @@ func TestCache_Get(t *testing.T) {
 		_, ok := c.get("qwe")
 		requireFalse(t, ok)
 
-		c.store["asd"] = cacheVal{res: NewResult("val")}
+		c.store["asd"] = cacheVal{res: newResult("val")}
 
 		res, ok := c.get("asd")
 		requireTrue(t, ok)
-		requireEquals(t, cacheVal{res: NewResult("val")}, res)
+		requireEquals(t, cacheVal{res: newResult("val")}, res)
 	})
 
 	t.Run("read_mutex", func(t *testing.T) {
 		c := newCache()
-		c.setOnce("asd", func() (res *Result, err error) {
-			return NewResult(nil), nil
+		c.setOnce("asd", func() (res *result, err error) {
+			return newResult(nil), nil
 		})
 		c.m.RLock()
 		_, ok := c.get("asd")
@@ -97,8 +97,8 @@ func TestCache_Get(t *testing.T) {
 
 	t.Run("write_mutex", func(t *testing.T) {
 		c := newCache()
-		c.setOnce("asd", func() (res *Result, err error) {
-			return NewResult(nil), nil
+		c.setOnce("asd", func() (res *result, err error) {
+			return newResult(nil), nil
 		})
 		c.m.Lock()
 		var ok bool
@@ -125,17 +125,17 @@ func TestCache_SetOnce(t *testing.T) {
 		c := newCache()
 		cnt := 0
 		key1 := cacheKey("1")
-		c.setOnce(key1, func() (res *Result, err error) {
+		c.setOnce(key1, func() (res *result, err error) {
 			cnt++
-			return NewResult(1), nil
+			return newResult(1), nil
 		})
 		requireEquals(t, 1, cnt)
 		requireEquals(t, 1, c.store[key1].res.Value)
 		noError(t, c.store[key1].err)
 
-		c.setOnce(key1, func() (res *Result, err error) {
+		c.setOnce(key1, func() (res *result, err error) {
 			cnt++
-			return NewResult(2), nil
+			return newResult(2), nil
 		})
 		requireEquals(t, 1, cnt)
 		requireEquals(t, 1, c.store[key1].res.Value)
@@ -147,13 +147,13 @@ func TestCache_SetOnce(t *testing.T) {
 		key1 := cacheKey("1")
 		key2 := cacheKey("2")
 		cnt := 0
-		c.setOnce(key1, func() (res *Result, err error) {
+		c.setOnce(key1, func() (res *result, err error) {
 			cnt++
-			return NewResult(1), nil
+			return newResult(1), nil
 		})
-		c.setOnce(key2, func() (res *Result, err error) {
+		c.setOnce(key2, func() (res *result, err error) {
 			cnt++
-			return NewResult(2), nil
+			return newResult(2), nil
 		})
 		requireEquals(t, 2, cnt)
 		requireEquals(t, 1, c.store[key1].res.Value)
@@ -170,9 +170,9 @@ func TestCache_SetOnce(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			c.setOnce(key, func() (res *Result, err error) {
+			c.setOnce(key, func() (res *result, err error) {
 				runtime.Goexit()
-				return NewResult(3), nil
+				return newResult(3), nil
 			})
 		}()
 		wg.Wait()
@@ -193,11 +193,11 @@ func TestCache_SetOnce(t *testing.T) {
 
 		// first
 		go func() {
-			c.setOnce(key, func() (res *Result, err error) {
+			c.setOnce(key, func() (res *result, err error) {
 				close(firstMuStarted)
 				<-firstMuNeedFinish
 
-				return NewResult(1), nil
+				return newResult(1), nil
 			})
 
 			close(firstMuFinished)
@@ -210,9 +210,9 @@ func TestCache_SetOnce(t *testing.T) {
 
 		var doneSecond int64
 		go func() {
-			c.setOnce(key, func() (res *Result, err error) {
+			c.setOnce(key, func() (res *result, err error) {
 				// func will not call never
-				return NewResult(2), nil
+				return newResult(2), nil
 			})
 
 			// must executed only after fist func finished
@@ -254,12 +254,12 @@ func TestCache_SetOnce(t *testing.T) {
 
 		// first
 		go func() {
-			c.setOnce(key1, func() (res *Result, err error) {
+			c.setOnce(key1, func() (res *result, err error) {
 				close(firstMuStarted)
 
 				<-firstMuNeedFinish
 
-				return NewResult(1), nil
+				return newResult(1), nil
 			})
 
 			close(firstMuFinished)
@@ -269,9 +269,9 @@ func TestCache_SetOnce(t *testing.T) {
 		<-firstMuStarted
 
 		// call second func in same goroutine
-		c.setOnce(key2, func() (res *Result, err error) {
+		c.setOnce(key2, func() (res *result, err error) {
 			// func will not call never
-			return NewResult(2), nil
+			return newResult(2), nil
 		})
 
 		// allow finish first func after second already finished
@@ -301,8 +301,8 @@ func TestCache_GetOrSetRaceCondition(_ *testing.T) {
 
 			for j := 0; j < iterations; j++ {
 				key := cacheKey(strconv.Itoa(rand.Intn(rndMaxBound)))
-				v, ok := c.GetOrSet(key, func() (res *Result, err error) {
-					return NewResult(1), nil
+				v, ok := c.GetOrSet(key, func() (res *result, err error) {
+					return newResult(1), nil
 				})
 				_ = v
 				_ = ok

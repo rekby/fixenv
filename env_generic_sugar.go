@@ -19,19 +19,19 @@ func CacheResult[TRes any](env Env, f GenericFixtureFunction[TRes], options ...C
 	}
 
 	addSkipLevelCache(&cacheOptions)
-	var oldStyleFunc FixtureFunction = func() (*Result, error) {
+	var oldStyleFunc fixtureFunction = func() (*result, error) {
 		res, err := f()
 
-		var oldStyleRes *Result
+		var oldStyleRes *result
 		if res != nil {
-			oldStyleRes = &Result{
+			oldStyleRes = &result{
 				Value:            res.Value,
 				ResultAdditional: res.ResultAdditional,
 			}
 		}
 		return oldStyleRes, err
 	}
-	res := env.CacheResult(oldStyleFunc, cacheOptions)
+	res := env.cacheResult(oldStyleFunc, cacheOptions)
 	if res == nil {
 		var zero TRes
 		return zero
